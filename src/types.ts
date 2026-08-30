@@ -5,6 +5,12 @@ export interface Employee {
   dept: string;
   avatar: string;
   notes: string;
+  coachingAdvisor?: {
+    motivationKey: string;
+    riskMitigation: string;
+    communicationStyle: string;
+    growthTarget: string;
+  };
   facts?: Fact[];
   summaries?: Summary[];
 }
@@ -54,18 +60,49 @@ export interface ChatSession {
   messages: ChatMessage[];
 }
 
-export interface SalesAnalytics {
-  totalSalesTomans: number; // in Tomans
-  totalTransactions: number;
-  salesDays: number;
-  avgTransactionTomans: number;
-  medianBasketTomans: number;
-  largestTransactionTomans: number;
-  avgDailySalesTomans: number;
-  medianDailySalesTomans: number;
-  commissionEligibleSharePct: number;
-  eligibleSalesSharePct: number;
-  monthlyTrend: { month: string; salesTomans: number; transactions: number }[];
-  biggestDays: { date: string; salesTomans: number; orders: number; topItems: string }[];
-  amountDistribution: { range: string; count: number; percentage: number }[];
+export interface FashionStyle {
+  id: string;
+  name: string;
+  category: 'bespoke_suit' | 'tuxedo' | 'overcoat' | 'smart_casual' | 'seasonal_flannel';
+  description: string;
+  fabricDetails: string;
+  colorPalette: string[];
+  sampleImages: string[]; // Base64 or image URLs
+  createdAt: string;
 }
+
+export interface LookbookAnchor {
+  id: string;
+  title: string;
+  poseDescription: string;
+  cameraAngle: string;
+  lightingVibe: string;
+  imageUrl: string;
+}
+
+export interface GeneratedEditorial {
+  id: string;
+  prompt: string;
+  aestheticCategory: string;
+  imageUrl: string;
+  createdAt: string;
+  aspectRatio: string;
+}
+
+export interface TransferredFittingResult {
+  id: string;
+  basePostureImage: string;
+  styleId: string;
+  styleName: string;
+  extractedVibePrompt: string;
+  finalPrompt: string;
+  generatedImageUrl: string;
+  createdAt: string;
+}
+
+export interface LogoSettings {
+  customLogoUrl: string | null;
+  watermarkOpacity: number; // 0 to 1
+  watermarkEnabled: boolean;
+}
+

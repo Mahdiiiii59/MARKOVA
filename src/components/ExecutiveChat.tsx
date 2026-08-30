@@ -39,33 +39,29 @@ export const ExecutiveChat: React.FC<ExecutiveChatProps> = ({
     await onSendMessage(text);
   };
 
-  // Persian Greeting according to local time
+  // Persian Greeting with warm, friendly tone for Nima
   const getPersianGreeting = () => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) {
       return {
-        persian: 'صبح بخیر، نیما',
-        english: 'Good morning, Nima',
+        persian: 'سلام نیما جان، صبح بخیر',
         icon: <Sun className="w-5 h-5 text-amber-400" />
       };
     }
     if (hour >= 12 && hour < 17) {
       return {
-        persian: 'روز بخیر، نیما',
-        english: 'Good afternoon, Nima',
+        persian: 'سلام نیما جان، روز بخیر',
         icon: <Coffee className="w-5 h-5 text-amber-400" />
       };
     }
     if (hour >= 17 && hour < 22) {
       return {
-        persian: 'عصر بخیر، نیما',
-        english: 'Good evening, Nima',
+        persian: 'سلام نیما جان، عصر بخیر',
         icon: <Coffee className="w-5 h-5 text-amber-500" />
       };
     }
     return {
-      persian: 'شب بخیر، نیما',
-      english: 'Good night, Nima',
+      persian: 'سلام نیما جان، شب بخیر',
       icon: <Moon className="w-5 h-5 text-indigo-400" />
     };
   };
@@ -73,10 +69,10 @@ export const ExecutiveChat: React.FC<ExecutiveChatProps> = ({
   const greeting = getPersianGreeting();
 
   const quickPrompts = [
-    { textFa: 'وضعیت سفارشات و پورسانت سعید', textEn: 'Bespoke sales update for Saeid' },
-    { textFa: 'خلاصه ساختار فروش ۳۸.۱۲ میلیارد تومانی', textEn: 'Showroom sales breakdown' },
-    { textFa: 'وضعیت فاکتورهای پارچه میلان ایتالیا', textEn: 'Biella mills wool shipment status' },
-    { textFa: 'عملکرد مایکل، مصطفی و اسدی', textEn: 'Staff performance summary' }
+    { textFa: 'وضعیت سفارشات و پورسانت سعید', descFa: 'بررسی قرارداد ۱.۲۵۱ میلیاردی و کالیته‌های بیلا' },
+    { textFa: 'خلاصه ساختار فروش ۳۸.۱۲ میلیارد تومانی', descFa: 'تحلیل بازدهی دوخت سفارشی و نقدینگی' },
+    { textFa: 'وضعیت فاکتورهای پارچه میلان ایتالیا', descFa: 'سفارش پارچه‌های فاستونی سوپر ۱۵۰ تا ۱۸۰' },
+    { textFa: 'عملکرد مایکل، مصطفی و اسدی', descFa: 'گزارش سالن پرو، فروش آماده و تراز مالی' }
   ];
 
   return (
@@ -93,12 +89,9 @@ export const ExecutiveChat: React.FC<ExecutiveChatProps> = ({
               <h2 className="text-base sm:text-lg font-bold text-stone-100 tracking-tight font-sans">
                 {greeting.persian}
               </h2>
-              <span className="text-[10px] text-amber-400/90 font-mono bg-amber-950/60 border border-amber-800/40 px-2 py-0.5 rounded-full font-medium">
-                {greeting.english}
-              </span>
             </div>
             <p className="text-[11px] text-stone-400">
-              دستیار هوشمند و مشاور ارشد اجرایی مارکووا آنلاین است.
+              سارا (مشاور هوشمند مارکووا) آنلاین است.
             </p>
           </div>
         </div>
@@ -144,8 +137,8 @@ export const ExecutiveChat: React.FC<ExecutiveChatProps> = ({
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-stone-200">چگونه می‌توانم در تصمیم‌گیری‌های امروز به شما کمک کنم؟</p>
-              <p className="text-xs text-stone-500 mt-1">اطلاعات فاکتورها، انبار پارچه و هوش پرسنلی لود شده است.</p>
+              <p className="text-sm font-semibold text-stone-200">نیما جان، چگونه می‌توانم امروز به شما کمک کنم؟</p>
+              <p className="text-xs text-stone-500 mt-1">تمام داده‌های مالی، پرونده پرسنل و استودیوی تصویری آماده است.</p>
             </div>
 
             {/* Quick Prompt Pills */}
@@ -154,10 +147,10 @@ export const ExecutiveChat: React.FC<ExecutiveChatProps> = ({
                 <button
                   key={idx}
                   onClick={() => onSendMessage(qp.textFa)}
-                  className="text-left bg-stone-900/80 hover:bg-stone-800/90 border border-stone-800/80 hover:border-amber-500/40 p-2.5 rounded-xl text-xs transition-all cursor-pointer group"
+                  className="text-right bg-stone-900/80 hover:bg-stone-800/90 border border-stone-800/80 hover:border-amber-500/40 p-2.5 rounded-xl text-xs transition-all cursor-pointer group"
                 >
                   <div className="text-stone-200 font-medium group-hover:text-amber-300">{qp.textFa}</div>
-                  <div className="text-[10px] text-stone-500 mt-0.5">{qp.textEn}</div>
+                  <div className="text-[10px] text-stone-500 mt-0.5">{qp.descFa}</div>
                 </button>
               ))}
             </div>
@@ -171,17 +164,18 @@ export const ExecutiveChat: React.FC<ExecutiveChatProps> = ({
                 className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
               >
                 <div
-                  className={`max-w-[90%] sm:max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-md ${
+                  className={`max-w-[90%] sm:max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-md ${
                     isUser
                       ? 'bg-amber-600 text-stone-950 font-medium'
-                      : 'bg-stone-900/95 text-stone-200 border border-stone-800/90'
+                      : 'bg-stone-900/95 text-stone-100 border border-stone-800/90'
                   }`}
+                  dir="auto"
                 >
-                  <div className="whitespace-pre-wrap font-sans text-[13px] sm:text-[14px]">
+                  <div className="whitespace-pre-wrap font-sans text-[13px] sm:text-[14px] bilingual-content leading-relaxed">
                     {msg.content}
                   </div>
                 </div>
-                <div className="text-[10px] text-stone-500 mt-1 px-1 flex items-center gap-1.5 font-mono">
+                <div className="text-[10px] text-stone-500 mt-1 px-1 flex items-center gap-1.5 font-mono" dir="ltr">
                   <span>{msg.timestamp}</span>
                   {msg.source && <span>&bull; {msg.source}</span>}
                 </div>
@@ -191,23 +185,24 @@ export const ExecutiveChat: React.FC<ExecutiveChatProps> = ({
         )}
 
         {isLoading && (
-          <div className="flex items-center gap-2 text-xs text-stone-400 py-2 px-2">
+          <div className="flex items-center gap-2 text-xs text-stone-400 py-2 px-2" dir="auto">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-            <span>MARKOVA AI در حال تحلیل و پردازش پاسخ...</span>
+            <span>سارا در حال تحلیل و پردازش پاسخ...</span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
+      {/* Input Form with dir="auto" */}
       <form onSubmit={handleSubmit} className="pt-3 flex items-center gap-2">
         <input
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="پیام خود را بنویسید (فارسی یا انگلیسی)..."
-          className="flex-1 bg-stone-900/90 border border-stone-800 rounded-xl px-4 py-3 text-sm text-stone-100 placeholder:text-stone-500 focus:outline-none focus:border-amber-500/60 transition-colors shadow-inner"
+          placeholder="پیام خود را برای سارا بنویسید..."
+          dir="auto"
+          className="flex-1 bg-stone-900/90 border border-stone-800 rounded-xl px-4 py-3 text-sm text-stone-100 placeholder:text-stone-500 focus:outline-none focus:border-amber-500/60 transition-colors shadow-inner bilingual-content"
         />
         <button
           type="submit"

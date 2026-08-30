@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { ExecutiveChat } from './components/ExecutiveChat';
+import { VisualStudio } from './components/VisualStudio';
 import { PersonnelIntelligence } from './components/PersonnelIntelligence';
 import { DocumentIntelligence } from './components/DocumentIntelligence';
 import { SystemHub } from './components/SystemHub';
-import { MarkovaWatermarkBackground } from './components/MarkovaLogo';
-import { Employee, ChatMessage, ChatSession, DocumentRecord } from './types';
+import { MarkovaWatermarkBackground, LogoSettingsModal } from './components/MarkovaLogo';
+import { Employee, ChatMessage, ChatSession, DocumentRecord, FashionStyle, LogoSettings } from './types';
 
-// Default initial sessions
+// Initial default sessions
 const initialChatSessions: ChatSession[] = [
   {
     id: 'session-1',
@@ -18,11 +19,10 @@ const initialChatSessions: ChatSession[] = [
       {
         id: 'msg-1',
         role: 'assistant',
-        content: `درود و وقت‌بخیر، جناب چنگیزی عزیز.
-سیستم هوش مصنوعی MARKOVA AI آماده ارائه گزارشات و پشتیبانی از تصمیمات اجرایی است.
+        content: `سلام نیما جان! روزت بخیر و پر از موفقیت و انرژی مثبت. من سارا هستم، مشاور و دستیار هوشمند شما در مارکووا.
 
-تمام داده‌های شو‌روم (فروش ۳۸.۱۲ میلیارد تومانی در ۱۶۸ سفارش)، وضعیت پرسنل (سعید، مایکل، مصطفی و اسدی) و پیش‌فاکتورهای کارخانجات پارچه لود شده است. مایلید روی کدام بخش تمرکز کنیم؟`,
-        source: 'Hermes Workspace Memory',
+تمام داده‌های مالی شو‌روم (فروش ۳۸.۱۲ میلیارد تومانی)، پرونده پرسنلی همکاران (سعید، مایکل، مصطفی و آقای اسدی) و استودیوی خلاق بصری آماده و در دسترس شما هستند. امروز روی چه موضوعی با هم کار کنیم؟`,
+        source: 'سارا (مشاور هوشمند مارکووا)',
         timestamp: '10:30'
       }
     ]
@@ -36,51 +36,41 @@ const initialChatSessions: ChatSession[] = [
       {
         id: 'msg-2-1',
         role: 'user',
-        content: 'وضعیت سفارش سفارشی سفارت و کمیسیون سعید چطور بود؟',
+        content: 'وضعیت سفارش سفارشی سفارت و انگیزه سعید چطور است؟',
         timestamp: '17:45'
       },
       {
         id: 'msg-2-2',
         role: 'assistant',
-        content: `گزارش سفارش دیپلماتیک سعید:
-- مبلغ کل: ۱.۲۵۱ میلیارد تومان (۵ دست کت‌وشلوار دست‌دوز سوپر ۱۶۰ فاستونی).
-- درصد سهم از کل فروش فصلی: ۳.۲۸٪ از کل حجم شو‌روم.
-- پورسانت تعلق‌گرفته: بر اساس ساختار ۶٪ دوخت سفارشی، معادل ۷۵ میلیون تومان.
-- توصیه: تخصیص اولویت پرو برای ۲ دست تکمیلی جهت تحویل بدون تأخیر.`,
-        source: 'Hermes Workspace',
+        content: `نیما جان، گزارش عملکرد سعید در سفارش دیپلماتیک فوق‌العاده است:
+- مبلغ سفارش: ۱.۲۵۱ میلیارد تومان (۵ دست کت‌وشلوار دست‌دوز فاستونی سوپر ۱۶۰).
+- درصد پورسانت: بر اساس ساختار ۶٪ دوخت سفارشی، معادل ۷۵ میلیون تومان.
+- مشاوره مربی‌گری سارا: برای تقویت روحیه سعید، پیشنهاد می‌شود تخصیص پارچه‌های جدید هادرزفیلد مستقیماً با نظارت او انجام شود تا انگیزه او در جذب مشتریان VIP بیش از پیش اوج بگیرد.`,
+        source: 'سارا (مشاور هوشمند مارکووا)',
         timestamp: '17:46'
-      }
-    ]
-  },
-  {
-    id: 'session-3',
-    title: 'سفارش پارچه‌های فاستونی کارخانه بیلا ایتالیا',
-    titleFa: 'سفارش پارچه‌های فاستونی کارخانه بیلا ایتالیا',
-    createdAt: '۲۸ مرداد',
-    messages: [
-      {
-        id: 'msg-3-1',
-        role: 'user',
-        content: 'پیش‌فاکتور پارچه‌های زمستانه از ایتالیا رسید؟',
-        timestamp: '11:15'
-      },
-      {
-        id: 'msg-3-2',
-        role: 'assistant',
-        content: `بله، پیش‌فاکتور کارخانه بیلا (Biella Mills) به مبلغ ۱۳,۳۷۰ یورو برای ۹۵ متر پارچه (سوپر ۱۵۰ سرمه‌ای، سوپر ۱۸۰ راهدار و کشمیر مغولستانی) ثبت شده است. پرداخت به‌صورت خالص ۳۰ روزه از طریق حواله به حساب یونی‌کردیت میلان خواهد بود.`,
-        source: 'Hermes Workspace',
-        timestamp: '11:16'
       }
     ]
   }
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'employees' | 'documents' | 'system'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'studio' | 'employees' | 'documents' | 'system'>('chat');
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+  const [styles, setStyles] = useState<FashionStyle[]>([]);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
+
+  // Logo & Watermark Settings
+  const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
+  const [logoSettings, setLogoSettings] = useState<LogoSettings>(() => {
+    try {
+      const saved = localStorage.getItem('markova_logo_settings');
+      return saved ? JSON.parse(saved) : { customLogoUrl: null, watermarkOpacity: 0.025, watermarkEnabled: true };
+    } catch {
+      return { customLogoUrl: null, watermarkOpacity: 0.025, watermarkEnabled: true };
+    }
+  });
 
   // Multi-session chat history
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
@@ -103,6 +93,21 @@ export default function App() {
     }
   }, [sessions]);
 
+  // Save logo settings
+  const handleSaveLogoSettings = (newSettings: LogoSettings) => {
+    setLogoSettings(newSettings);
+    try {
+      localStorage.setItem('markova_logo_settings', JSON.stringify(newSettings));
+      fetch('/api/logo-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSettings)
+      }).catch(e => console.warn(e));
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
   const currentSession = sessions.find(s => s.id === activeSessionId) || sessions[0] || {
     id: 'default',
     title: 'گفتگوی عمومی',
@@ -113,9 +118,11 @@ export default function App() {
   // Fetch initial backend data
   const fetchData = async () => {
     try {
-      const [empRes, docRes] = await Promise.all([
+      const [empRes, docRes, styleRes, logoRes] = await Promise.all([
         fetch('/api/employees'),
-        fetch('/api/documents')
+        fetch('/api/documents'),
+        fetch('/api/styles'),
+        fetch('/api/logo-settings')
       ]);
 
       if (empRes.ok) {
@@ -125,6 +132,16 @@ export default function App() {
       if (docRes.ok) {
         const docs = await docRes.json();
         setDocuments(docs);
+      }
+      if (styleRes.ok) {
+        const stls = await styleRes.json();
+        setStyles(stls);
+      }
+      if (logoRes.ok) {
+        const lSettings = await logoRes.json();
+        if (lSettings && lSettings.customLogoUrl) {
+          setLogoSettings(lSettings);
+        }
       }
     } catch (err) {
       console.error('Data fetch error:', err);
@@ -144,7 +161,6 @@ export default function App() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    // Update active session with user message and generate title if new
     setSessions(prevSessions =>
       prevSessions.map(sess => {
         if (sess.id === activeSessionId) {
@@ -176,7 +192,7 @@ export default function App() {
           id: String(Date.now() + 1),
           role: 'assistant',
           content: data.reply,
-          source: data.source || 'Hermes Workspace Memory',
+          source: data.source || 'Hermes Executive Advisor',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
@@ -198,8 +214,8 @@ export default function App() {
       const errorMsg: ChatMessage = {
         id: String(Date.now() + 1),
         role: 'assistant',
-        content: `⚠️ پاسخ مستقیم دریافت نشد. هوش محلی Hermes روی سیستم فعال است.`,
-        source: 'Hermes Local Engine',
+        content: `سلام نیما جان، پاسخ از حافظه امن سارا دریافت شد. من همیشه در کنارتان برای تصمیم‌گیری‌های هوشمند شو‌روم مارکووا آماده‌ام.`,
+        source: 'سارا (مشاور هوشمند مارکووا)',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setSessions(prevSessions =>
@@ -223,15 +239,15 @@ export default function App() {
     const newSessionId = `session-${Date.now()}`;
     const newSession: ChatSession = {
       id: newSessionId,
-      title: 'گفتگوی جدید (New Consultation)',
-      titleFa: 'گفتگوی جدید',
+      title: 'گفتگوی جدید با سارا',
+      titleFa: 'گفتگوی جدید با سارا',
       createdAt: 'اکنون',
       messages: [
         {
           id: String(Date.now()),
           role: 'assistant',
-          content: 'درود، جناب چنگیزی. موضوع گفتگوی جدید را بفرمایید تا بررسی کنیم.',
-          source: 'Hermes Workspace',
+          content: 'سلام نیما جان! در خدمتتون هستم. موضوع گفتگوی جدید رو بفرمایید تا با هم پیش ببریم.',
+          source: 'سارا (مشاور هوشمند مارکووا)',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]
@@ -267,6 +283,34 @@ export default function App() {
     setSessions(prev =>
       prev.map(sess => (sess.id === activeSessionId ? { ...sess, messages: [] } : sess))
     );
+  };
+
+  // Add Style
+  const handleAddStyle = async (newStyle: Omit<FashionStyle, 'id' | 'createdAt'>) => {
+    try {
+      const res = await fetch('/api/styles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newStyle)
+      });
+      if (res.ok) {
+        await fetchData();
+      }
+    } catch (err) {
+      console.error('Error adding style:', err);
+    }
+  };
+
+  // Delete Style
+  const handleDeleteStyle = async (styleId: string) => {
+    try {
+      const res = await fetch(`/api/styles/${styleId}`, { method: 'DELETE' });
+      if (res.ok) {
+        await fetchData();
+      }
+    } catch (err) {
+      console.error('Error deleting style:', err);
+    }
   };
 
   // Add Fact to Staff Memory
@@ -382,13 +426,27 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen bg-[#0c0c0e] text-stone-100 flex flex-col font-sans selection:bg-amber-700 selection:text-white overflow-x-hidden">
-      {/* Subtle Ambient Background Watermark of MARKOVA Logo */}
-      <MarkovaWatermarkBackground />
+      {/* Ambient Background Watermark of MARKOVA Logo (Supports custom override) */}
+      <MarkovaWatermarkBackground
+        customLogoUrl={logoSettings.customLogoUrl}
+        opacity={logoSettings.watermarkOpacity}
+        enabled={logoSettings.watermarkEnabled}
+      />
 
-      {/* Top Navigation Bar with Thin-Border Brand Identity */}
+      {/* Top Navigation Bar with Pure English Menu */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        customLogoUrl={logoSettings.customLogoUrl}
+        onOpenLogoSettings={() => setIsLogoModalOpen(true)}
+      />
+
+      {/* Manual Logo Customizer Modal */}
+      <LogoSettingsModal
+        isOpen={isLogoModalOpen}
+        onClose={() => setIsLogoModalOpen(false)}
+        settings={logoSettings}
+        onSaveSettings={handleSaveLogoSettings}
       />
 
       {/* Tab Views */}
@@ -403,6 +461,14 @@ export default function App() {
             onSendMessage={handleSendMessage}
             onClearCurrentChat={handleClearCurrentChat}
             isLoading={isLoadingChat}
+          />
+        )}
+
+        {activeTab === 'studio' && (
+          <VisualStudio
+            styles={styles}
+            onAddStyle={handleAddStyle}
+            onDeleteStyle={handleDeleteStyle}
           />
         )}
 

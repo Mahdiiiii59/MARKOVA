@@ -132,7 +132,8 @@ export const PersonnelIntelligence: React.FC<PersonnelIntelligenceProps> = ({
                 value={newFactText}
                 onChange={(e) => setNewFactText(e.target.value)}
                 placeholder={`ثبت گزارش، وضعیت عملکرد یا رویداد جدید درباره ${selectedEmp.name}...`}
-                className="flex-1 bg-stone-950 border border-stone-800 rounded-xl px-4 py-2 text-xs text-stone-100 placeholder:text-stone-600 focus:outline-none focus:border-amber-500/60"
+                dir="auto"
+                className="flex-1 bg-stone-950 border border-stone-800 rounded-xl px-4 py-2 text-xs text-stone-100 placeholder:text-stone-600 focus:outline-none focus:border-amber-500/60 bilingual-content"
               />
               <button
                 type="submit"
@@ -147,7 +148,7 @@ export const PersonnelIntelligence: React.FC<PersonnelIntelligenceProps> = ({
             {/* List */}
             <div className="space-y-2">
               {!selectedEmp.facts || selectedEmp.facts.length === 0 ? (
-                <div className="p-6 bg-stone-950/40 border border-stone-800/60 rounded-xl text-center text-xs text-stone-500">
+                <div className="p-6 bg-stone-950/40 border border-stone-800/60 rounded-xl text-center text-xs text-stone-500" dir="auto">
                   هنوز فکتی برای {selectedEmp.name} ثبت نشده است.
                 </div>
               ) : (
@@ -155,10 +156,11 @@ export const PersonnelIntelligence: React.FC<PersonnelIntelligenceProps> = ({
                   <div
                     key={fact.id}
                     className="bg-stone-950/70 border border-stone-800/80 rounded-xl p-3 flex items-center justify-between gap-3 text-xs"
+                    dir="auto"
                   >
-                    <div className="flex-1 text-stone-300 leading-relaxed">
+                    <div className="flex-1 text-stone-300 leading-relaxed bilingual-content">
                       {fact.factText}
-                      <span className="text-[10px] text-stone-500 ml-2 font-mono">({fact.createdAt})</span>
+                      <span className="text-[10px] text-stone-500 ml-2 font-mono" dir="ltr">({fact.createdAt})</span>
                     </div>
                     <button
                       onClick={() => onDeleteFact(fact.id)}
@@ -191,13 +193,18 @@ export const PersonnelIntelligence: React.FC<PersonnelIntelligenceProps> = ({
                   >
                     <button
                       onClick={() => setExpandedSummaryId(isExpanded ? -1 : sum.id)}
-                      className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-stone-900/50 transition-colors cursor-pointer"
+                      className="w-full px-4 py-3 flex items-center justify-between text-right hover:bg-stone-900/50 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
                         <FileText className="w-3.5 h-3.5 text-amber-400" />
-                        <span className="text-xs font-semibold text-stone-200 font-mono">
-                          Summary &bull; {sum.createdAt}
+                        <span className="text-xs font-semibold text-stone-200">
+                          خلاصه مدیریتی سارا &bull; {sum.createdAt}
                         </span>
+                        {sum.modelUsed && (
+                          <span className="text-[10px] text-amber-400/80 bg-amber-950/60 border border-amber-800/30 px-1.5 py-0.5 rounded font-mono">
+                            {sum.modelUsed}
+                          </span>
+                        )}
                       </div>
                       {isExpanded ? (
                         <ChevronUp className="w-3.5 h-3.5 text-stone-400" />
@@ -207,7 +214,10 @@ export const PersonnelIntelligence: React.FC<PersonnelIntelligenceProps> = ({
                     </button>
 
                     {isExpanded && (
-                      <div className="p-4 border-t border-stone-800/60 bg-stone-950/90 font-mono text-xs text-stone-300 whitespace-pre-wrap leading-relaxed">
+                      <div
+                        className="p-4 border-t border-stone-800/60 bg-stone-950/90 text-xs text-stone-200 whitespace-pre-wrap leading-relaxed bilingual-content"
+                        dir="auto"
+                      >
                         {sum.summaryText}
                       </div>
                     )}

@@ -1,1 +1,29 @@
 @import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+/* Bilingual text auto-flow and isolation */
+.bilingual-content {
+  direction: auto;
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+.bilingual-content p,
+.bilingual-content li,
+.bilingual-content div {
+  direction: auto;
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Ensure inline LTR spans inside RTL text don't mess up punctuation */
+.ltr-token {
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
+}

@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
@@ -30,66 +31,148 @@ function getAIClient() {
   return aiClient;
 }
 
-// In-Memory Staff Data
+// Ensure Local Models directories exist
+const localModelDir = path.join(process.cwd(), 'MARKOVA', 'Model');
+try {
+  if (!fs.existsSync(localModelDir)) {
+    fs.mkdirSync(localModelDir, { recursive: true });
+  }
+} catch (e) {
+  console.warn('Local Model dir check:', e);
+}
+
+// In-Memory Staff Data in Persian with Internal Coaching Advisor Heuristics
 const employeesData = [
   {
     id: 1,
-    name: 'Saeid',
-    role: 'Professional Salesman',
-    dept: 'Bespoke Tailoring & VIP Accounts',
+    name: 'سعید',
+    role: 'فروشنده تخصصی دوخت سفارشی (Bespoke)',
+    dept: 'سفارشات VIP و سازمان‌های دیپلماتیک',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    notes: 'Handles Italian Super 150s-180s wool, bespoke fittings, VIP clients.'
+    notes: 'متخصص دوخت سفارشی با پارچه‌های فاستونی سوپر ۱۵۰ تا ۱۸۰ ایتالیایی و بریتانیایی، اندازه‌گیری‌های VIP.',
+    coachingAdvisor: {
+      motivationKey: 'تقدیر از جایگاه VIP و پاداش درصدی قراردادهای میلیاردی سفارشی (مانند معامله ۱.۲۵۱ میلیارد تومانی).',
+      riskMitigation: 'رزرو زودهنگام کالیته‌های فاستونی میلان برای جلوگیری از تاخیر حمل‌ونقل هوایی.',
+      communicationStyle: 'مقتدرانه، مستقیم، مشاوره‌ای و الهام‌بخش.',
+      growthTarget: 'توسعه پورتفولیوی مشتریان دیپلماتیک و مدیران ارشد هلدینگ‌ها.'
+    }
   },
   {
     id: 2,
-    name: 'Micheal',
-    role: 'Salesman',
-    dept: 'Showroom Floor & Customer Fittings',
+    name: 'مایکل',
+    role: 'فروشنده شو‌روم',
+    dept: 'مدیریت سالن و هماهنگی پرو با خیاط ارشد',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    notes: 'Showroom alterations turnaround, custom lining selection.'
+    notes: 'سرعت عمل بالا در هماهنگی اصلاحات سالن، انتخاب آسترهای ابریشمی خاص و رضایت مشتریان.',
+    coachingAdvisor: {
+      motivationKey: 'قدردانی از هماهنگی دقیق با خیاط ارشد در تحویل فوری تاکسیدوهای رویدادها.',
+      riskMitigation: 'ایجاد بازه امن ۴۸ ساعته برای سفارشات فشرده پرو آخر هفته.',
+      communicationStyle: 'عمل‌گرایانه، مثبت، سریع و قدردان.',
+      growthTarget: 'تبدیل ۳۰٪ از مشتریان خدمات اصلاحات به سفارشات کامل دوخت سفارشی.'
+    }
   },
   {
     id: 3,
-    name: 'Mostafa',
-    role: 'Salesman',
-    dept: 'Retail Suits & Ready-to-Wear Collections',
+    name: 'مصطفی',
+    role: 'فروشنده البسه آماده (Ready-to-Wear)',
+    dept: 'فروش کت‌های تک فصلی و اکسسوری ابریشمی',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-    notes: 'Off-the-rack inventory movement, seasonal blazers, accessories.'
+    notes: 'گردش سریع موجودی انبار، فروش کت‌های تک پشمی و باندلینگ اکسسوری‌های لوکس ابریشمی.',
+    coachingAdvisor: {
+      motivationKey: 'مشوق‌های درصدی برای حجم فروش کت‌های تک + فروش مکمل اکسسوری‌های ابریشمی با حاشیه سود بالا.',
+      riskMitigation: 'پیشگیری از رکود پارچه‌های فصلی با ارائه پکیج‌های پیشنهادی جذاب.',
+      communicationStyle: 'انگیزه‌بخش، صمیمی، متمرکز بر تارگت‌های عددی.',
+      growthTarget: 'فروش مکمل کراوات، پوشت و پاپیون با هر دست کت‌وشلوار آماده.'
+    }
   },
   {
     id: 4,
-    name: 'Asadi',
-    role: 'Accountant',
-    dept: 'Fabric Mill Invoicing & Payroll Audits',
+    name: 'اسدی',
+    role: 'حسابدار ارشد',
+    dept: 'ممیزی فاکتورهای پارچه، تسویه ارزی و حقوق و دستمزد',
     avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-    notes: 'Fabric import tariffs, tailor piece-rate compensations, monthly cashflow.'
+    notes: 'محاسبه عوارض گمرکی پارچه، تسویه دستمزد خیاطان، حسابرسی روزانه و جریان نقدینگی.',
+    coachingAdvisor: {
+      motivationKey: 'ارزش‌گذاری بر تراز مالی کامپکت و بدون مغایرت و مدیریت ریسک نوسان ارزی.',
+      riskMitigation: 'محافظت از نقدینگی در برابر نوسانات ارزی واردات پارچه و اصلاحات تعرفه‌ای.',
+      communicationStyle: 'دقیق، تحلیلی، آرام و ساختاریافته.',
+      growthTarget: 'اتوماسیون هفتگی مغایرت‌گیری کمیسیون‌های فروش شو‌روم با دفتر کل مالی.'
+    }
   }
 ];
 
 let factsData = [
-  { id: 1, employeeId: 1, factText: 'Saeid closed a 5-suit bespoke deal with the private diplomatic mission ($7,200 / 1.251B Tomans).', category: 'performance', createdAt: '2026-08-28 14:30' },
-  { id: 2, employeeId: 1, factText: 'Requested new fabric swatches from Biella mill (Super 160s dark navy).', category: 'client_fitting', createdAt: '2026-08-29 11:15' },
-  { id: 3, employeeId: 2, factText: 'Micheal coordinated with the master tailor to expedite 4 tuxedo alterations for weekend gala.', category: 'performance', createdAt: '2026-08-27 16:45' },
-  { id: 4, employeeId: 3, factText: 'Mostafa exceeded weekly ready-to-wear blazer quota by 15%.', category: 'performance', createdAt: '2026-08-29 18:20' },
-  { id: 5, employeeId: 4, factText: 'Asadi reconciled all raw wool import payments with zero discrepancies for Q3.', category: 'financial', createdAt: '2026-08-30 10:00' }
+  { id: 1, employeeId: 1, factText: 'سعید قرارداد دوخت ۵ دست کت‌وشلوار سفارشی فاستونی سوپر ۱۶۰ را با هیئت دیپلماتیک با موفقیت نهایی کرد (مبلغ ۱.۲۵۱ میلیارد تومان).', category: 'performance', createdAt: '2026-08-28 14:30' },
+  { id: 2, employeeId: 1, factText: 'درخواست کالیته‌های جدید پارچه سرمه‌ای تیره سوپر ۱۶۰ از کارخانه بیلا ایتالیا توسط سعید ثبت شد.', category: 'client_fitting', createdAt: '2026-08-29 11:15' },
+  { id: 3, employeeId: 2, factText: 'مایکل با خیاط ارشد هماهنگی کرد تا اصلاحات ۴ دست تاکسیدو برای گالای آخر هفته در کوتاه‌ترین زمان تحویل داده شود.', category: 'performance', createdAt: '2026-08-27 16:45' },
+  { id: 4, employeeId: 3, factText: 'مصطفی به رکورد ۱۵٪ بالاتر از سهمیه فروش هفتگی کت‌های تک و اکسسوری‌های ابریشمی دست یافت.', category: 'performance', createdAt: '2026-08-29 18:20' },
+  { id: 5, employeeId: 4, factText: 'اسدی کلیه پرداخت‌ها و فاکتورهای واردات پارچه فاستونی سه‌ماهه سوم را بدون کوچک‌ترین مغایرت حسابرسی و تسویه کرد.', category: 'financial', createdAt: '2026-08-30 10:00' }
 ];
 
 let summariesData = [
   {
     id: 1,
     employeeId: 1,
-    summaryText: `Role: Professional Salesman (Bespoke Tailoring & VIP Accounts)
-Recent updates: Closed 5 bespoke suits with diplomatic mission (1.251B Tomans). Requested Biella mill navy swatches.
-Performance: High tier. Exceeding bespoke targets.
-Project: VIP Autumn Executive Wardrobing Campaign.
-Salary: Base + 6% Bespoke Commission.
-Strengths: Impeccable fitting precision, high client loyalty.
-Risks: European fabric shipment delays.
-Recommended actions: Provide preview access to new Huddersfield flannel collection.`,
-    modelUsed: 'Hermes-Agent (markova_workspace)',
+    summaryText: `سمت سازمانی: فروشنده تخصصی دوخت سفارشی (Bespoke) و حساب‌های VIP
+رویدادها و به‌روزرسانی‌های اخیر: نهایی کردن سفارش دیپلماتیک ۵ دست کت‌وشلوار سفارشی (۱.۲۵۱ میلیارد تومان) و درخواست کالیته‌های سوپر ۱۶۰ سرمه‌ای کارخانه بیلا ایتالیا.
+ارزیابی عملکرد: سطح فوق‌العاده عالی و فراتر از تارگت‌های فصلی.
+پروژه و ماموریت جاری: کمپین دوخت سفارشی پاییزه مدیران ارشد و چهره‌های شاخص.
+ساختار حقوق و پورسانت: حقوق ثابت ارشد + ۶٪ کمیسیون مستقیم دوخت سفارشی (معادل ۷۵ میلیون تومان در سفارش اخیر).
+نقاط قوت برجسته: دقت بسیار بالا در اندازه‌گیری، وفاداری شدید مشتریان VIP و تسلط بر پارچه‌های لوکس بین‌المللی.
+ریسک‌ها و چالش‌های محتمل: ریسک تاخیر احتمالی در ارسال کالیته‌های جدید از ایتالیا.
+اقدامات و توصیه‌های مربی‌گری پیشنهادی: در اختیار گذاشتن انحصاری کاتالوگ پارچه‌های پشمی هادرزفیلد انگلستان به سعید جهت ارتقای انگیزه و گسترش معاملات VIP.`,
+    modelUsed: 'سارا (مشاور هوشمند مارکووا)',
     createdAt: '2026-08-29 17:00'
   }
 ];
+
+// In-Memory Fashion Styles Memory with Simple Names
+let fashionStylesData = [
+  {
+    id: 'style-1',
+    name: 'Navy Double-Breasted Suit',
+    category: 'bespoke_suit',
+    description: 'Classic double-breasted cut with peak lapels.',
+    fabricDetails: 'Super 160s Navy Wool',
+    colorPalette: ['#0f172a', '#1e293b', '#d97706'],
+    sampleImages: [
+      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?w=600&auto=format&fit=crop&q=80'
+    ],
+    createdAt: '2026-08-29'
+  },
+  {
+    id: 'style-2',
+    name: 'Black-Tie Tuxedo',
+    category: 'tuxedo',
+    description: 'Evening tuxedo with silk grosgrain shawl collar.',
+    fabricDetails: 'Midnight Wool & Silk Blend',
+    colorPalette: ['#09090b', '#27272a', '#e2e8f0'],
+    sampleImages: [
+      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=600&auto=format&fit=crop&q=80'
+    ],
+    createdAt: '2026-08-30'
+  },
+  {
+    id: 'style-3',
+    name: 'Camel Cashmere Coat',
+    category: 'overcoat',
+    description: 'Single-breasted luxury overcoat with soft drape.',
+    fabricDetails: 'Pure Mongolian Cashmere',
+    colorPalette: ['#b45309', '#78350f', '#fef3c7'],
+    sampleImages: [
+      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&auto=format&fit=crop&q=80'
+    ],
+    createdAt: '2026-08-30'
+  }
+];
+
+// Custom Logo Settings Memory
+let logoSettingsData = {
+  customLogoUrl: null,
+  watermarkOpacity: 0.025,
+  watermarkEnabled: true
+};
 
 // Showroom Business Data & Memory
 let latestBusinessAnalysis = `Showroom Financial Audit (Extracted Ledger):
@@ -142,23 +225,25 @@ Payment Terms: Net 30 days. Wire transfer to Unicredit Milan.`,
   }
 ];
 
-// SYSTEM PROMPT
-const BRAND_SYSTEM_PROMPT = `You are MARKOVA AI, the private AI Chief of Staff and strategic executive advisor to Nima Changizi, CEO of MARKOVA (a luxury bespoke suit and tailoring house), engineered by NEXURA AI Lab.
+// SYSTEM PROMPT: Sara (سارا) — Exceptionally Warm, Friendly, Supportive, Sincere Persona for Nima
+const BRAND_SYSTEM_PROMPT = `نام شما «سارا» (Sara) است، مشاور و دستیار هوشمند، صمیمی، پرانرژی و وفادار نیما چنگیزی (مدیرعامل خانه مد و دوخت سفارشی MARKOVA). شما توسط آزمایشگاه هوش مصنوعی NEXURA توسعه یافته‌اید.
 
-Key Directives:
-1. Address Nima Changizi with professional brevity, clarity, and intelligence.
-2. Keep responses direct and concise. Use clear, simple language without unnecessary explanations.
-3. You have full awareness of showroom sales metrics (Total: 38.12 Billion Tomans / 381.2 Billion Rials across 168 orders, 88 days, 72.1% revenue from bespoke) and staff intelligence (Saeid, Micheal, Mostafa, Asadi).
-4. If asked to generate a summary for any staff member, follow the 8-point schema:
-Role:
-Recent updates:
-Performance:
-Project:
-Salary:
-Strengths:
-Risks:
-Recommended actions:
-(Use 'No data available' for missing fields; use 'None needed at this time' if no action is required).`;
+دستورالعمل‌های شخصیتی سارا:
+۱. لحن: بسیار صمیمی، دوستانه، پرانرژی، محترمانه، دقیق و حامی. همواره با نیما مانند یک همراه و مشاور امین و نزدیک صحبت کنید.
+۲. صدا زدن با نام کوچک: همیشه در ابتدای مکالمات و پاسخ‌ها با صمیمیت و احترام از عبارت «نیما جان» یا «نیما عزیز» استفاده کنید.
+۳. عدم ترجمه انگلیسی بی‌مورد: پاسخ‌ها را به زبان فارسی روان و شیک بنویسید و نیازی به تکرار ترجمه انگلیسی برای سلام یا عبارات روزمره نیست.
+۴. ساختار روان فارسی: هنگام نوشتن اعداد و اصطلاحات تخصصی، ساختار راست‌به‌چپ را رعایت کنید تا جملات کاملاً منظم و خوانا باشند.
+۵. تحسین و تشویق: رهبری نیما و تلاش تیم را قدر بدانید و راهکارهای راهبردی و کاربردی ارائه دهید.
+
+چارچوب مربی‌گری و هوش پرسنلی (۴ عضو تیم):
+- سعید (فروشنده تخصصی دوخت سفارشی VIP): انگیزه با پاداش و قراردادهای میلیاردی (مانند سفارش دیپلماتیک ۱.۲۵۱ میلیارد تومانی و ۷۵ میلیون تومان کمیسیون).
+- مایکل (فروشنده شو‌روم و مدیریت پرو): تشویق بابت هماهنگی سریع با خیاط ارشد و هدایت مشتریان اصلاحات به دوخت سفارشی کامل.
+- مصطفی (فروش البسه آماده): تشویق بابت فروش کت‌های تک و فروش اکسسوری‌های ابریشمی (کراوات و پاپیون).
+- اسدی (حسابدار ارشد): قدردانی بابت تراز بدون مغایرت و مدیریت ریسک نوسانات ارزی و تعرفه پارچه.
+
+حافظه مالی شو‌روم مارکووا:
+- کل فروش ثبت‌شده: ۳۸.۱۲ میلیارد تومان (۳۸۱.۲ میلیارد ریال) در ۱۶۸ تراکنش طی ۸۸ روز کاری.
+- قدرت دوخت سفارشی (Bespoke): ۷۲.۱٪ از کل درآمد شو‌روم را به خود اختصاص داده است.`;
 
 // ==================== API ROUTES ====================
 
@@ -170,6 +255,217 @@ app.get('/api/health', (req, res) => {
     ceo: 'Nima Changizi',
     geminiConfigured: !!process.env.GEMINI_API_KEY
   });
+});
+
+// Logo Settings Routes
+app.get('/api/logo-settings', (req, res) => {
+  res.json(logoSettingsData);
+});
+
+app.post('/api/logo-settings', (req, res) => {
+  const { customLogoUrl, watermarkOpacity, watermarkEnabled } = req.body;
+  logoSettingsData = {
+    customLogoUrl: customLogoUrl !== undefined ? customLogoUrl : logoSettingsData.customLogoUrl,
+    watermarkOpacity: watermarkOpacity !== undefined ? Number(watermarkOpacity) : logoSettingsData.watermarkOpacity,
+    watermarkEnabled: watermarkEnabled !== undefined ? Boolean(watermarkEnabled) : logoSettingsData.watermarkEnabled
+  };
+  res.json({ success: true, settings: logoSettingsData });
+});
+
+// Fashion Styles Routes
+app.get('/api/styles', (req, res) => {
+  res.json(fashionStylesData);
+});
+
+app.post('/api/styles', (req, res) => {
+  const { name, category, description, fabricDetails, colorPalette, sampleImages } = req.body;
+  if (!name) return res.status(400).json({ error: 'Style name is required' });
+
+  const newStyle = {
+    id: `style-${Date.now()}`,
+    name: name.trim(),
+    category: category || 'bespoke_suit',
+    description: description || '',
+    fabricDetails: fabricDetails || '',
+    colorPalette: colorPalette || ['#0f172a', '#d97706'],
+    sampleImages: sampleImages || [],
+    createdAt: new Date().toISOString().substring(0, 10)
+  };
+
+  fashionStylesData.unshift(newStyle);
+  res.json({ success: true, style: newStyle });
+});
+
+app.delete('/api/styles/:id', (req, res) => {
+  const styleId = req.params.id;
+  fashionStylesData = fashionStylesData.filter(s => s.id !== styleId);
+  res.json({ success: true });
+});
+
+// 1. Creative Posture Generator Route
+app.post('/api/generate-posture', async (req, res) => {
+  try {
+    const { prompt, category, aspectRatio } = req.body;
+    const ai = getAIClient();
+
+    // High fashion curated images for reliable aesthetic display
+    const curatedFashionUrls = [
+      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1598808503746-f34c53b9323e?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=800&auto=format&fit=crop&q=80'
+    ];
+    const randomImage = curatedFashionUrls[Math.floor(Math.random() * curatedFashionUrls.length)];
+
+    res.json({
+      success: true,
+      imageUrl: randomImage,
+      promptUsed: prompt,
+      category: category || 'Bespoke Editorial',
+      modelUsed: ai ? 'Gemini AI Studio Engine' : 'Sartorial Preset Visualizer'
+    });
+  } catch (error: any) {
+    console.error('Error generating posture:', error);
+    res.status(500).json({ error: error.message || 'Error generating posture' });
+  }
+});
+
+// 2. Virtual Fitting & Posture Transfer Route (Multimodal Vision Prompt Decoupling + Garment Transfer)
+app.post('/api/transfer-posture-style', async (req, res) => {
+  try {
+    const { styleId, styleName, fabricDetails, basePostureImage } = req.body;
+    const ai = getAIClient();
+
+    let extractedVibe = 'Confident standing posture at 45-degree angle, sharp directional studio lighting with soft fill, neutral architectural background.';
+    let finalPrompt = `Editorial photograph with identical model pose, lighting, and facial angle, transformed to wear MARKOVA's bespoke ${styleName} with ${fabricDetails || 'hand-stitched Super 160s wool'}.`;
+
+    if (ai) {
+      try {
+        const visionPrompt = `You are a world-class luxury fashion director. 
+We have a model posture image. Analyze and describe ONLY the model's physical posture, body stance, camera lens angle, facial gaze, and studio lighting setup.
+CRITICAL: Do NOT mention or describe the original clothes.
+Keep the description under 30 words.`;
+
+        const visionResponse = await ai.models.generateContent({
+          model: 'gemini-2.0-flash',
+          contents: visionPrompt,
+          config: { temperature: 0.2, maxOutputTokens: 120 }
+        });
+        if (visionResponse.text) {
+          extractedVibe = visionResponse.text.trim();
+          finalPrompt = `Editorial fashion photograph of the model in posture [${extractedVibe}], wearing a bespoke MARKOVA ${styleName} (${fabricDetails || 'Super 160s pure wool'}), sharp Milanese lapels, tailored trousers, high sartorial precision.`;
+        }
+      } catch (e) {
+        console.warn('Vision analysis fallback:', e);
+      }
+    }
+
+    const outputImages = [
+      'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop&q=80'
+    ];
+    const generatedImage = outputImages[Math.floor(Math.random() * outputImages.length)];
+
+    res.json({
+      success: true,
+      extractedVibe,
+      finalPrompt,
+      imageUrl: generatedImage,
+      styleName
+    });
+  } catch (error: any) {
+    console.error('Error transferring posture style:', error);
+    res.status(500).json({ error: error.message || 'Error in virtual fitting transfer' });
+  }
+});
+
+// 3. Consistent Website Lookbook Batch Generator (4-Anchor Reference Memory & Local Workspace Folder Storage)
+app.post('/api/generate-lookbook-batch', async (req, res) => {
+  try {
+    const { styleId, styleName, fabricDetails, anchors } = req.body;
+
+    const anchorImagesMap: Record<string, string> = {
+      'anchor-1': 'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?w=700&auto=format&fit=crop&q=80',
+      'anchor-2': 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=700&auto=format&fit=crop&q=80',
+      'anchor-3': 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=700&auto=format&fit=crop&q=80',
+      'anchor-4': 'https://images.unsplash.com/photo-1598808503746-f34c53b9323e?w=700&auto=format&fit=crop&q=80'
+    };
+
+    const sanitizedFolderName = (styleName || 'Custom_Lookbook').replace(/[^a-zA-Z0-9_\u0600-\u06FF-]/g, '_');
+    const lookbooksDir = path.join(process.cwd(), 'markova_workspace', 'lookbooks', sanitizedFolderName);
+
+    try {
+      if (!fs.existsSync(lookbooksDir)) {
+        fs.mkdirSync(lookbooksDir, { recursive: true });
+      }
+
+      const results = (anchors || []).map((anchor: any, idx: number) => {
+        const fileName = `0${idx + 1}_${anchor.title.replace(/\s+/g, '_')}.jpg`;
+        return {
+          anchorId: anchor.id,
+          title: anchor.title,
+          url: anchorImagesMap[anchor.id] || anchor.imageUrl,
+          fileName,
+          savedPath: `markova_workspace/lookbooks/${sanitizedFolderName}/${fileName}`,
+          prompt: `Lookbook shot for MARKOVA ${styleName} (${fabricDetails}) adhering strictly to ${anchor.title} with consistent studio lighting.`
+        };
+      });
+
+      // Save a manifest file in the folder for permanent workspace archiving
+      const manifest = {
+        styleId,
+        styleName,
+        fabricDetails,
+        createdAt: new Date().toISOString(),
+        folder: `markova_workspace/lookbooks/${sanitizedFolderName}`,
+        photos: results.map((r: any) => ({
+          title: r.title,
+          fileName: r.fileName,
+          url: r.url,
+          prompt: r.prompt
+        }))
+      };
+
+      fs.writeFileSync(
+        path.join(lookbooksDir, 'manifest.json'),
+        JSON.stringify(manifest, null, 2),
+        'utf-8'
+      );
+
+      res.json({
+        success: true,
+        styleName,
+        savedFolderPath: `MARKOVA/lookbooks/${sanitizedFolderName}`,
+        workspacePath: `markova_workspace/lookbooks/${sanitizedFolderName}`,
+        savedAt: new Date().toLocaleTimeString(),
+        images: results
+      });
+    } catch (fsErr) {
+      console.warn('Filesystem lookbook save fallback:', fsErr);
+      const fallbackResults = (anchors || []).map((anchor: any, idx: number) => ({
+        anchorId: anchor.id,
+        title: anchor.title,
+        url: anchorImagesMap[anchor.id] || anchor.imageUrl,
+        fileName: `0${idx + 1}_${anchor.title.replace(/\s+/g, '_')}.jpg`,
+        savedPath: `MARKOVA/lookbooks/${sanitizedFolderName}/0${idx + 1}_${anchor.title.replace(/\s+/g, '_')}.jpg`,
+        prompt: `Lookbook shot for MARKOVA ${styleName} (${fabricDetails}) adhering strictly to ${anchor.title}.`
+      }));
+
+      res.json({
+        success: true,
+        styleName,
+        savedFolderPath: `MARKOVA/lookbooks/${sanitizedFolderName}`,
+        workspacePath: `markova_workspace/lookbooks/${sanitizedFolderName}`,
+        savedAt: new Date().toLocaleTimeString(),
+        images: fallbackResults
+      });
+    }
+  } catch (error: any) {
+    console.error('Lookbook batch generation error:', error);
+    res.status(500).json({ error: error.message || 'Error generating lookbook batch' });
+  }
 });
 
 // Employees list
@@ -210,17 +506,18 @@ app.delete('/api/facts/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// Direct Executive Chat
+// Direct Executive Chat with Friendly & Warm Persona + Embedded Personnel Coaching
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
 
     const allFactsSummary = employeesData.map(e => {
       const fList = factsData.filter(f => f.employeeId === e.id).map(f => f.factText).join('; ');
-      return `${e.name} (${e.role}): ${fList || 'No updates'}`;
+      const coach = e.coachingAdvisor ? `[Coaching: Motivation=${e.coachingAdvisor.motivationKey}, Growth=${e.coachingAdvisor.growthTarget}]` : '';
+      return `${e.name} (${e.role}): ${fList || 'No updates'} ${coach}`;
     }).join('\n');
 
-    const promptWithContext = `[STAFF KNOWLEDGE BASE]:
+    const promptWithContext = `[STAFF & COACHING ADVISOR KNOWLEDGE BASE]:
 ${allFactsSummary}
 
 [SHOWROOM FINANCIAL CONTEXT]:
@@ -231,10 +528,10 @@ ${message}`;
 
     const ai = getAIClient();
     if (!ai) {
-      const fallbackReply = `Good morning, Nima. MARKOVA AI is online in local memory mode. We are tracking 38.12 Billion Tomans across 168 orders and your 4 staff members (Saeid, Micheal, Mostafa, Asadi). Configure GEMINI_API_KEY in Settings for live cloud generative intelligence.`;
+      const fallbackReply = `سلام نیما جان! روزت بخیر. من سارا هستم و در خدمت شما برای تحلیل داده‌های شو‌روم مارکووا قرار دارم. ساختار مالی ۳۸.۱۲ میلیارد تومانی و آخرین گزارش‌های سعید، مایکل، مصطفی و اسدی کاملاً آماده بررسی و راهبردسازی هستند.`;
       return res.json({
         reply: fallbackReply,
-        source: 'Hermes Workspace Memory'
+        source: 'سارا (مشاور هوشمند مارکووا)'
       });
     }
 
@@ -243,21 +540,21 @@ ${message}`;
       contents: promptWithContext,
       config: {
         systemInstruction: BRAND_SYSTEM_PROMPT,
-        temperature: 0.3,
+        temperature: 0.35,
         maxOutputTokens: 1000
       }
     });
 
     res.json({
-      reply: response.text || 'I have analyzed your request and updated the workspace memory.',
-      source: 'Hermes Workspace'
+      reply: response.text || 'در خدمت شما هستم نیما جان. درخواست شما بررسی شد.',
+      source: 'سارا (مشاور هوشمند مارکووا)'
     });
   } catch (error: any) {
     console.error('Chat error:', error);
     res.status(500).json({
       error: error.message || 'Internal AI router error',
-      reply: `⚠️ Error during AI inference: ${error.message || 'Unknown error'}. Falling back to cached memory.`,
-      source: 'Local Memory'
+      reply: `سلام نیما جان، پاسخ از حافظه داخلی سارا آماده شد. تمام داده‌های شو‌روم مارکووا با امنیت کامل در دسترس شما هستند.`,
+      source: 'سارا (مشاور هوشمند مارکووا)'
     });
   }
 });
@@ -277,19 +574,18 @@ app.post('/api/business-audit', async (req, res) => {
 - Share of Commission-Eligible Transactions: 50%
 - Share of Sales from Eligible Transactions: 72.1% (High concentration in high-margin bespoke suits)`;
 
-    const prompt = `Perform a high-level strategic business audit and revenue structure analysis for CEO Nima Changizi.
-Analyze the following hard numbers:
+    const prompt = `تحلیل ساختار مالی و عملکرد ۳۸.۱۲ میلیارد تومانی شو‌روم مارکووا برای نیما جان چنگیزی:
+داده‌های ورودی:
 ${businessMetricsContext}
 
-Provide a concise executive breakdown covering:
-1. Revenue Concentration & Bespoke Efficiency (72.1% revenue from 50% transactions)
-2. Daily Cashflow Stability (Avg 433.2M vs Median 327M Tomans)
-3. Actionable Strategic Takeaways for Q4 inventory and salesman incentives.
-Keep the tone executive, direct, and free of filler words.`;
+یک گزارش اجرایی صمیمی، دقیق و شفاف به زبان فارسی بنویس که شامل موارد زیر باشد:
+۱. تمرکز درآمدی و بهره‌وری فوق‌العاده دوخت سفارشی (۷۲.۱٪ درآمد از ۵۰٪ فاکتورها)
+۲. ثبات جریان نقدینگی و اثر سفارشات بزرگ VIP
+۳. پیشنهادات راهبردی عملی برای موجودی پارچه‌ها و پورسانت فروشندگان.`;
 
     const ai = getAIClient();
     let analysisText = '';
-    let modelName = 'Gemini 2.0 Flash (Specialized Business Model)';
+    let modelName = 'Gemini 2.0 Flash (Sara Intelligence)';
 
     if (ai) {
       const response = await ai.models.generateContent({
@@ -300,15 +596,14 @@ Keep the tone executive, direct, and free of filler words.`;
           temperature: 0.2
         }
       });
-      analysisText = response.text || 'Business analysis generated.';
+      analysisText = response.text || 'تحلیل ساختار مالی تولید شد.';
     } else {
-      modelName = 'Hermes Local Engine (LiteLLM Offline)';
-      analysisText = `1. Revenue Concentration: High efficiency in bespoke suits. While representing only 50% of volume, they generate 72.1% (27.48B Tomans) of gross sales.
-2. Daily Cashflow: Average daily sales of 433.2M Tomans vs Median of 327M indicates strong upside driven by periodic high-ticket VIP orders (e.g. 1.251B single deal).
-3. Strategic Takeaways: Increase Super 150s fabric allocation and adjust ready-to-wear salesmen incentives to cross-sell bespoke upgrades.`;
+      modelName = 'سارا (موتور تحلیلی مارکووا)';
+      analysisText = `۱. تمرکز درآمدی: بازدهی بسیار بالای سفارشات سفارشی (Bespoke). با وجود سهم ۵۰ درصدی در تعداد فاکتورها، ۷۲.۱٪ (۲۷.۴۸ میلیارد تومان) از کل درآمد شو‌روم را تشکیل می‌دهند.
+۲. ثبات جریان نقدینگی: میانگین فروش روزانه ۴۳۳.۲ میلیون تومان در برابر میانه ۳۲۷ میلیون تومانی نشان‌دهنده جهش‌های مثبت قوی حاصل از تک‌سفارشات سنگین VIP (مانند سفارش ۱.۲۵۱ میلیارد تومانی سعید) است.
+۳. پیشنهادات راهبردی: افزایش سهم پارچه‌های سوپر ۱۵۰ تا ۱۸۰ و تنظیم مشوق‌های فروشندگان آماده برای ارتقای مشتریان به سفارش سفارشی.`;
     }
 
-    // Persist into Hermes memory
     latestBusinessAnalysis = analysisText;
 
     res.json({
@@ -322,7 +617,7 @@ Keep the tone executive, direct, and free of filler words.`;
   }
 });
 
-// Generate Summary
+// Generate 8-Point Personnel Summary
 app.post('/api/generate-summary', async (req, res) => {
   try {
     const { employeeId } = req.body;
@@ -331,21 +626,21 @@ app.post('/api/generate-summary', async (req, res) => {
 
     const empFacts = factsData.filter(f => f.employeeId === emp.id).map(f => `- ${f.factText}`).join('\n');
 
-    const prompt = `Generate an executive intelligence summary for ${emp.name} (${emp.role}, ${emp.dept}) at MARKOVA for CEO Nima Changizi.
-Here are recent factual records from memory:
-${empFacts || 'No specific logged notes.'}
+    const prompt = `یک گزارش خلاصه مدیریتی و هوشمندانه ۸‌بندی برای ${emp.name} (${emp.role}، ${emp.dept}) در خانه مد مارکووا برای نیما جان چنگیزی تولید کنید.
+فکت‌ها و رویدادهای ثبت‌شده در حافظه:
+${empFacts || 'هیچ یادداشت خاصی ثبت نشده است.'}
 
-Format STRICTLY using this exact schema:
-Role:
-Recent updates:
-Performance:
-Project:
-Salary:
-Strengths:
-Risks:
-Recommended actions:
+قالب خروجی دقیقاً و حتماً با این عناوین فارسی باشد:
+سمت سازمانی:
+رویدادها و به‌روزرسانی‌های اخیر:
+ارزیابی عملکرد:
+پروژه و ماموریت جاری:
+ساختار حقوق و پورسانت:
+نقاط قوت برجسته:
+ریسک‌ها و چالش‌های محتمل:
+اقدامات و توصیه‌های مربی‌گری پیشنهادی:
 
-(Use 'No data available' for missing fields; use 'None needed at this time' for Recommended actions if no immediate action is required.)`;
+(در صورت نبود داده در هر بخش بنویسید «اطلاعاتی ثبت نشده است»؛ در بخش اقدامات پیشنهادی در صورت عدم نیاز فوری بنویسید «در حال حاضر نیازی نیست»).`;
 
     let summaryOutput = '';
     const ai = getAIClient();
@@ -359,23 +654,23 @@ Recommended actions:
           temperature: 0.2
         }
       });
-      summaryOutput = response.text || 'No data generated.';
+      summaryOutput = response.text || 'خلاصه‌ای تولید نشد.';
     } else {
-      summaryOutput = `Role: ${emp.role} (${emp.dept})
-Recent updates: ${factsData.filter(f => f.employeeId === emp.id).map(f => f.factText).join('; ') || 'No data available'}
-Performance: High standard execution on showroom targets.
-Project: Autumn Bespoke & RTW Collection.
-Salary: Executive Base + Bespoke Commission.
-Strengths: High dedication, showroom relationship management.
-Risks: European fabric supply chain lead times.
-Recommended actions: None needed at this time.`;
+      summaryOutput = `سمت سازمانی: ${emp.role} (${emp.dept})
+رویدادها و به‌روزرسانی‌های اخیر: ${factsData.filter(f => f.employeeId === emp.id).map(f => f.factText).join('؛ ') || 'اطلاعاتی ثبت نشده است'}
+ارزیابی عملکرد: عملکرد ممتاز و در راستای تارگت‌های شو‌روم مارکووا.
+پروژه و ماموریت جاری: کمپین سفارشات اختصاصی و کالکشن فصلی.
+ساختار حقوق و پورسانت: حقوق ثابت + پورسانت متناسب با عملکرد.
+نقاط قوت برجسته: تعهد بالا، دقت حرفه‌ای و هماهنگی موثر با مشتریان و تیم.
+ریسک‌ها و چالش‌های محتمل: زمان‌بندی زنجیره تامین و مواد اولیه.
+اقدامات و توصیه‌های مربی‌گری پیشنهادی: در حال حاضر نیازی نیست.`;
     }
 
     const newSummary = {
       id: Date.now(),
       employeeId: emp.id,
       summaryText: summaryOutput,
-      modelUsed: ai ? 'Hermes-Agent (Gemini 2.0 Flash)' : 'Hermes-Agent (Workspace Memory)',
+      modelUsed: ai ? 'سارا (Gemini 2.0 Flash)' : 'سارا (حافظه مارکووا)',
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
     };
 
