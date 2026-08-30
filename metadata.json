@@ -1,0 +1,6 @@
+{
+  "name": "MARKOVA AI",
+  "description": "Private executive AI assistant for Nima Changizi (CEO of MARKOVA) with Hermes agent memory, employee intelligence, and document analysis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

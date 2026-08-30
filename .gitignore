@@ -1,0 +1,20 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# MARKOVA AI Privacy & Local Data Ignores
+markova_data.db
+markova_workspace/
+Model/
+uploaded_documents/
+*.gguf
+*.safetensors
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
