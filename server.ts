@@ -445,89 +445,11 @@ try {
 }
 
 // In-Memory Staff Data in Persian with Internal Coaching Advisor Heuristics
-const employeesData = [
-  {
-    id: 1,
-    name: 'سعید',
-    role: 'فروشنده تخصصی دوخت سفارشی (Bespoke)',
-    dept: 'سفارشات VIP و سازمان‌های دیپلماتیک',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    notes: 'متخصص دوخت سفارشی با پارچه‌های فاستونی سوپر ۱۵۰ تا ۱۸۰ ایتالیایی و بریتانیایی، اندازه‌گیری‌های VIP.',
-    coachingAdvisor: {
-      motivationKey: 'تقدیر از جایگاه VIP و پاداش درصدی قراردادهای میلیاردی سفارشی (مانند معامله ۱.۲۵۱ میلیارد تومانی).',
-      riskMitigation: 'رزرو زودهنگام کالیته‌های فاستونی میلان برای جلوگیری از تاخیر حمل‌ونقل هوایی.',
-      communicationStyle: 'مقتدرانه، مستقیم، مشاوره‌ای و الهام‌بخش.',
-      growthTarget: 'توسعه پورتفولیوی مشتریان دیپلماتیک و مدیران ارشد هلدینگ‌ها.'
-    }
-  },
-  {
-    id: 2,
-    name: 'مایکل',
-    role: 'فروشنده شو‌روم',
-    dept: 'مدیریت سالن و هماهنگی پرو با خیاط ارشد',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    notes: 'سرعت عمل بالا در هماهنگی اصلاحات سالن، انتخاب آسترهای ابریشمی خاص و رضایت مشتریان.',
-    coachingAdvisor: {
-      motivationKey: 'قدردانی از هماهنگی دقیق با خیاط ارشد در تحویل فوری تاکسیدوهای رویدادها.',
-      riskMitigation: 'ایجاد بازه امن ۴۸ ساعته برای سفارشات فشرده پرو آخر هفته.',
-      communicationStyle: 'عمل‌گرایانه، مثبت، سریع و قدردان.',
-      growthTarget: 'تبدیل ۳۰٪ از مشتریان خدمات اصلاحات به سفارشات کامل دوخت سفارشی.'
-    }
-  },
-  {
-    id: 3,
-    name: 'مصطفی',
-    role: 'فروشنده البسه آماده (Ready-to-Wear)',
-    dept: 'فروش کت‌های تک فصلی و اکسسوری ابریشمی',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-    notes: 'گردش سریع موجودی انبار، فروش کت‌های تک پشمی و باندلینگ اکسسوری‌های لوکس ابریشمی.',
-    coachingAdvisor: {
-      motivationKey: 'مشوق‌های درصدی برای حجم فروش کت‌های تک + فروش مکمل اکسسوری‌های ابریشمی با حاشیه سود بالا.',
-      riskMitigation: 'پیشگیری از رکود پارچه‌های فصلی با ارائه پکیج‌های پیشنهادی جذاب.',
-      communicationStyle: 'انگیزه‌بخش، صمیمی، متمرکز بر تارگت‌های عددی.',
-      growthTarget: 'فروش مکمل کراوات، پوشت و پاپیون با هر دست کت‌وشلوار آماده.'
-    }
-  },
-  {
-    id: 4,
-    name: 'اسدی',
-    role: 'حسابدار ارشد',
-    dept: 'ممیزی فاکتورهای پارچه، تسویه ارزی و حقوق و دستمزد',
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-    notes: 'محاسبه عوارض گمرکی پارچه، تسویه دستمزد خیاطان، حسابرسی روزانه و جریان نقدینگی.',
-    coachingAdvisor: {
-      motivationKey: 'ارزش‌گذاری بر تراز مالی کامپکت و بدون مغایرت و مدیریت ریسک نوسان ارزی.',
-      riskMitigation: 'محافظت از نقدینگی در برابر نوسانات ارزی واردات پارچه و اصلاحات تعرفه‌ای.',
-      communicationStyle: 'دقیق، تحلیلی، آرام و ساختاریافته.',
-      growthTarget: 'اتوماسیون هفتگی مغایرت‌گیری کمیسیون‌های فروش شو‌روم با دفتر کل مالی.'
-    }
-  }
-];
+const employeesData = [];
 
-let factsData = [
-  { id: 1, employeeId: 1, factText: 'سعید قرارداد دوخت ۵ دست کت‌وشلوار سفارشی فاستونی سوپر ۱۶۰ را با هیئت دیپلماتیک با موفقیت نهایی کرد (مبلغ ۱.۲۵۱ میلیارد تومان).', category: 'performance', createdAt: '2026-08-28 14:30' },
-  { id: 2, employeeId: 1, factText: 'درخواست کالیته‌های جدید پارچه سرمه‌ای تیره سوپر ۱۶۰ از کارخانه بیلا ایتالیا توسط سعید ثبت شد.', category: 'client_fitting', createdAt: '2026-08-29 11:15' },
-  { id: 3, employeeId: 2, factText: 'مایکل با خیاط ارشد هماهنگی کرد تا اصلاحات ۴ دست تاکسیدو برای گالای آخر هفته در کوتاه‌ترین زمان تحویل داده شود.', category: 'performance', createdAt: '2026-08-27 16:45' },
-  { id: 4, employeeId: 3, factText: 'مصطفی به رکورد ۱۵٪ بالاتر از سهمیه فروش هفتگی کت‌های تک و اکسسوری‌های ابریشمی دست یافت.', category: 'performance', createdAt: '2026-08-29 18:20' },
-  { id: 5, employeeId: 4, factText: 'اسدی کلیه پرداخت‌ها و فاکتورهای واردات پارچه فاستونی سه‌ماهه سوم را بدون کوچک‌ترین مغایرت حسابرسی و تسویه کرد.', category: 'financial', createdAt: '2026-08-30 10:00' }
-];
+let factsData: any[] = [];
 
-let summariesData = [
-  {
-    id: 1,
-    employeeId: 1,
-    summaryText: `سمت سازمانی: فروشنده تخصصی دوخت سفارشی (Bespoke) و حساب‌های VIP
-رویدادها و به‌روزرسانی‌های اخیر: نهایی کردن سفارش دیپلماتیک ۵ دست کت‌وشلوار سفارشی (۱.۲۵۱ میلیارد تومان) و درخواست کالیته‌های سوپر ۱۶۰ سرمه‌ای کارخانه بیلا ایتالیا.
-ارزیابی عملکرد: سطح فوق‌العاده عالی و فراتر از تارگت‌های فصلی.
-پروژه و ماموریت جاری: کمپین دوخت سفارشی پاییزه مدیران ارشد و چهره‌های شاخص.
-ساختار حقوق و پورسانت: حقوق ثابت ارشد + ۶٪ کمیسیون مستقیم دوخت سفارشی (معادل ۷۵ میلیون تومان در سفارش اخیر).
-نقاط قوت برجسته: دقت بسیار بالا در اندازه‌گیری، وفاداری شدید مشتریان VIP و تسلط بر پارچه‌های لوکس بین‌المللی.
-ریسک‌ها و چالش‌های محتمل: ریسک تاخیر احتمالی در ارسال کالیته‌های جدید از ایتالیا.
-اقدامات و توصیه‌های مربی‌گری پیشنهادی: در اختیار گذاشتن انحصاری کاتالوگ پارچه‌های پشمی هادرزفیلد انگلستان به سعید جهت ارتقای انگیزه و گسترش معاملات VIP.`,
-    modelUsed: 'سارا (مشاور هوشمند مارکووا)',
-    createdAt: '2026-08-29 17:00'
-  }
-];
+let summariesData: any[] = [];
 
 // In-Memory Fashion Styles Memory with Simple Names
 let fashionStylesData = [
@@ -585,48 +507,7 @@ let latestBusinessAnalysis = `Showroom Financial Audit (Extracted Ledger):
 - Peak Transaction: 1.251 Billion Tomans closed by Saeid (Diplomatic Mission bespoke order).
 - Recommendation: Focus fabric inventory on Super 150s-180s wools as bespoke yields 3.2x higher margin than RTW.`;
 
-let documentsData = [
-  {
-    id: 1,
-    filename: 'Q3_Showroom_Sales_Ledger.csv',
-    fileType: '.csv',
-    fileSize: 4820,
-    employeeId: null,
-    employeeName: 'General Business',
-    topic: 'Sales & Financial Ledger',
-    extractedText: `Item,Category,Salesman,Quantity,Unit Price,Total
-Navy Super 150s Bespoke 2-Piece,Bespoke,Saeid,3,1450,4350
-Charcoal Double-Breasted Flannel,Bespoke,Saeid,2,1600,3200
-Midnight Blue Slim Tuxedo,Ready-to-Wear,Micheal,4,750,3000
-Classic Glen Plaid Blazer,Ready-to-Wear,Mostafa,7,420,2940
-Silk Satin Bowties & Cummerbunds,Accessories,Mostafa,12,65,780
-Master Tailor Alteration Surcharge,Service,Micheal,8,85,680`,
-    summaryNotes: 'High-margin bespoke suits represent 51% of total showroom revenue.',
-    uploadDate: '2026-08-30 09:30'
-  },
-  {
-    id: 2,
-    filename: 'Biella_Mills_Fabric_Invoice_August.txt',
-    fileType: '.txt',
-    fileSize: 2150,
-    employeeId: null,
-    employeeName: 'General Business',
-    topic: 'Fabric & Mill Invoices',
-    extractedText: `INVOICE #IT-88492 - BIELLA TEXTILE MILLS S.P.A.
-Client: MARKOVA Tailoring House
-Attention: Nima Changizi (CEO)
-
-Items:
-1. Super 150s Merino Wool (Midnight Navy) - 45 meters @ €92/m = €4,140
-2. Super 180s Silk-Wool Blend (Charcoal Pinstripe) - 30 meters @ €145/m = €4,350
-3. Pure Mongolian Cashmere Overcoating (Camel) - 20 meters @ €210/m = €4,200
-Shipping & Customs Clearance (Air Freight): €680
-TOTAL DUE: €13,370
-Payment Terms: Net 30 days. Wire transfer to Unicredit Milan.`,
-    summaryNotes: 'Biella textile mill raw material order.',
-    uploadDate: '2026-08-30 11:15'
-  }
-];
+let documentsData: any[] = [];
 
 // SYSTEM PROMPT: Sara (سارا) — Exceptionally Warm, Friendly, Supportive, Sincere Persona for Nima
 const BRAND_SYSTEM_PROMPT = `نام شما «سارا» (Sara) است، مشاور و دستیار هوشمند، صمیمی، پرانرژی و وفادار نیما چنگیزی (مدیرعامل خانه مد و دوخت سفارشی MARKOVA). شما توسط آزمایشگاه هوش مصنوعی NEXURA توسعه یافته‌اید.
@@ -961,9 +842,8 @@ app.post('/api/engine-ping', async (req, res) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
-          model: 'gapgpt-qwen-3.8',
-          messages: [{ role: 'user', content: 'ping' }],
-          max_tokens: 5
+          model: process.env.GAPGPT_MODEL || 'gapgpt-qwen-3.8',
+          messages: [{ role: 'user', content: 'Reply with exactly: ping' }]
         })
       });
       const latencyMs = Date.now() - startTime;
@@ -980,14 +860,11 @@ app.post('/api/engine-ping', async (req, res) => {
       if (!key) {
         return res.json({ success: false, latencyMs: 0, message: 'GEMINI_API_KEY is not configured in .env' });
       }
-      const client = getAIClient();
-      if (!client) {
-        return res.json({ success: false, latencyMs: 0, message: 'Gemini client initialization failed' });
-      }
+      // Instantiate fresh to ensure latest env var is picked up if dynamic
+      const client = new GoogleGenAI({ apiKey: key });
       await client.models.generateContent({
         model: 'gemini-2.0-flash',
-        contents: 'ping',
-        config: { maxOutputTokens: 5 }
+        contents: 'Reply with exactly: ping'
       });
       const latencyMs = Date.now() - startTime;
       return res.json({ success: true, latencyMs, message: `Connected (Gemini 2.0 Flash Online — ${latencyMs}ms)` });
@@ -1002,9 +879,8 @@ app.post('/api/engine-ping', async (req, res) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'user', content: 'ping' }],
-          max_tokens: 5
+          model: 'llama3-8b-8192', // Use a safer default for Groq ping
+          messages: [{ role: 'user', content: 'Reply with exactly: ping' }]
         })
       });
       const latencyMs = Date.now() - startTime;
@@ -1025,8 +901,7 @@ app.post('/api/engine-ping', async (req, res) => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
           model: 'qwen/qwen-2.5-72b-instruct',
-          messages: [{ role: 'user', content: 'ping' }],
-          max_tokens: 5
+          messages: [{ role: 'user', content: 'Reply with exactly: ping' }]
         })
       });
       const latencyMs = Date.now() - startTime;
