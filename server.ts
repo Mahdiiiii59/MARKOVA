@@ -8,8 +8,12 @@ import { createServer as createViteServer } from 'vite';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+let resolvedDir = '';
+if (typeof __dirname !== 'undefined') {
+  resolvedDir = __dirname;
+} else {
+  resolvedDir = path.dirname(fileURLToPath(import.meta.url));
+}
 
 const app = express();
 const PORT = 3000;
@@ -56,7 +60,7 @@ interface EngineRoutingState {
 let engineRoutingConfig: EngineRoutingState = {
   text: {
     primaryProvider: 'gapgpt',
-    primaryModel: 'gapgpt-qwen-3.8',
+    primaryModel: 'gpt-4o',
     fallback1Provider: 'gemini',
     fallback1Model: 'gemini-2.0-flash',
     fallback2Provider: 'groq',
@@ -97,7 +101,7 @@ async function callSpecificTextProvider(providerId: string, modelOverride?: stri
     const gapgptKey = process.env.GAPGPT_API_KEY;
     if (!gapgptKey) return null;
     const baseUrl = (process.env.GAPGPT_BASE_URL || 'https://api.gapgpt.com/v1').replace(/\/+$/, '');
-    const model = modelOverride || engineRoutingConfig.text.primaryModel || 'gapgpt-qwen-3.8';
+    const model = modelOverride || engineRoutingConfig.text.primaryModel || 'gpt-4o';
     const messages: any[] = [];
     if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
     messages.push({ role: 'user', content: prompt });
@@ -445,68 +449,75 @@ try {
 }
 
 // In-Memory Staff Data in Persian with Internal Coaching Advisor Heuristics
-const employeesData = [];
-
-let factsData: any[] = [];
-
-let summariesData: any[] = [];
-
-// In-Memory Fashion Styles Memory with Simple Names
-let fashionStylesData = [
+const employeesData = [
   {
-    id: 'style-1',
-    name: 'Navy Double-Breasted Suit',
-    category: 'bespoke_suit',
-    description: 'Classic double-breasted cut with peak lapels.',
-    fabricDetails: 'Super 160s Navy Wool',
-    colorPalette: ['#0f172a', '#1e293b', '#d97706'],
-    sampleImages: [
-      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?w=600&auto=format&fit=crop&q=80'
-    ],
-    createdAt: '2026-08-29'
+    id: 1,
+    name: 'سعید',
+    role: 'فروشنده تخصصی دوخت سفارشی (Bespoke)',
+    dept: 'سفارشات VIP و سازمان‌های دیپلماتیک',
+    avatar: null,
+    notes: 'متخصص دوخت سفارشی با پارچه‌های فاستونی سوپر ۱۵۰ تا ۱۸۰ ایتالیایی و بریتانیایی، اندازه‌گیری‌های VIP.',
+    coachingAdvisor: {
+      motivationKey: 'تقدیر از جایگاه VIP و پاداش درصدی قراردادهای میلیاردی سفارشی (مانند معامله ۱.۲۵۱ میلیارد تومانی).',
+      riskMitigation: 'رزرو زودهنگام کالیته‌های فاستونی میلان برای جلوگیری از تاخیر حمل‌ونقل هوایی.',
+      communicationStyle: 'مقتدرانه، مستقیم، مشاوره‌ای و الهام‌بخش.',
+      growthTarget: 'توسعه پورتفولیوی مشتریان دیپلماتیک و مدیران ارشد هلدینگ‌ها.'
+    }
   },
   {
-    id: 'style-2',
-    name: 'Black-Tie Tuxedo',
-    category: 'tuxedo',
-    description: 'Evening tuxedo with silk grosgrain shawl collar.',
-    fabricDetails: 'Midnight Wool & Silk Blend',
-    colorPalette: ['#09090b', '#27272a', '#e2e8f0'],
-    sampleImages: [
-      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=600&auto=format&fit=crop&q=80'
-    ],
-    createdAt: '2026-08-30'
+    id: 2,
+    name: 'مایکل',
+    role: 'فروشنده شو‌روم',
+    dept: 'مدیریت سالن و هماهنگی پرو با خیاط ارشد',
+    avatar: null,
+    notes: 'سرعت عمل بالا در هماهنگی اصلاحات سالن، انتخاب آسترهای ابریشمی خاص و رضایت مشتریان.',
+    coachingAdvisor: {
+      motivationKey: 'قدردانی از هماهنگی دقیق با خیاط ارشد در تحویل فوری تاکسیدوهای رویدادها.',
+      riskMitigation: 'ایجاد بازه امن ۴۸ ساعته برای سفارشات فشرده پرو آخر هفته.',
+      communicationStyle: 'عمل‌گرایانه، مثبت، سریع و قدردان.',
+      growthTarget: 'تبدیل ۳۰٪ از مشتریان خدمات اصلاحات به سفارشات کامل دوخت سفارشی.'
+    }
   },
   {
-    id: 'style-3',
-    name: 'Camel Cashmere Coat',
-    category: 'overcoat',
-    description: 'Single-breasted luxury overcoat with soft drape.',
-    fabricDetails: 'Pure Mongolian Cashmere',
-    colorPalette: ['#b45309', '#78350f', '#fef3c7'],
-    sampleImages: [
-      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&auto=format&fit=crop&q=80'
-    ],
-    createdAt: '2026-08-30'
+    id: 3,
+    name: 'مصطفی',
+    role: 'فروشنده البسه آماده (Ready-to-Wear)',
+    dept: 'فروش کت‌های تک فصلی و اکسسوری ابریشمی',
+    avatar: null,
+    notes: 'گردش سریع موجودی انبار، فروش کت‌های تک پشمی و باندلینگ اکسسوری‌های لوکس ابریشمی.',
+    coachingAdvisor: {
+      motivationKey: 'مشوق‌های درصدی برای حجم فروش کت‌های تک + فروش مکمل اکسسوری‌های ابریشمی با حاشیه سود بالا.',
+      riskMitigation: 'پیشگیری از رکود پارچه‌های فصلی با ارائه پکیج‌های پیشنهادی جذاب.',
+      communicationStyle: 'انگیزه‌بخش، صمیمی، متمرکز بر تارگت‌های عددی.',
+      growthTarget: 'فروش مکمل کراوات، پوشت و پاپیون با هر دست کت‌وشلوار آماده.'
+    }
+  },
+  {
+    id: 4,
+    name: 'اسدی',
+    role: 'حسابدار ارشد',
+    dept: 'ممیزی فاکتورهای پارچه، تسویه ارزی و حقوق و دستمزد',
+    avatar: null,
+    notes: 'محاسبه عوارض گمرکی پارچه، تسویه دستمزد خیاطان، حسابرسی روزانه و جریان نقدینگی.',
+    coachingAdvisor: {
+      motivationKey: 'ارزش‌گذاری بر تراز مالی کامپکت و بدون مغایرت و مدیریت ریسک نوسان ارزی.',
+      riskMitigation: 'محافظت از نقدینگی در برابر نوسانات ارزی واردات پارچه و اصلاحات تعرفه‌ای.',
+      communicationStyle: 'دقیق، تحلیلی، آرام و ساختاریافته.',
+      growthTarget: 'اتوماسیون هفتگی مغایرت‌گیری کمیسیون‌های فروش شو‌روم با دفتر کل مالی.'
+    }
   }
 ];
 
-// Custom Logo Settings Memory
 let logoSettingsData = {
   customLogoUrl: null,
   watermarkOpacity: 0.025,
   watermarkEnabled: true
 };
+let latestBusinessAnalysis = '';
 
-// Showroom Business Data & Memory
-let latestBusinessAnalysis = `Showroom Financial Audit (Extracted Ledger):
-- Total Recorded Sales: 38.12 Billion Tomans (381.2B Rials) across 168 transactions in 88 sales days.
-- Average Transaction: 226.9 Million Tomans; Median Basket: 139.55 Million Tomans.
-- Revenue Driver: Commission-eligible bespoke orders account for 72.1% of total revenue despite being only 50% of transactions.
-- Peak Transaction: 1.251 Billion Tomans closed by Saeid (Diplomatic Mission bespoke order).
-- Recommendation: Focus fabric inventory on Super 150s-180s wools as bespoke yields 3.2x higher margin than RTW.`;
-
+let factsData: any[] = [];
+let summariesData: any[] = [];
+let fashionStylesData: any[] = [];
 let documentsData: any[] = [];
 
 // SYSTEM PROMPT: Sara (سارا) — Exceptionally Warm, Friendly, Supportive, Sincere Persona for Nima
@@ -528,6 +539,42 @@ const BRAND_SYSTEM_PROMPT = `نام شما «سارا» (Sara) است، مشاو
 حافظه مالی شو‌روم مارکووا:
 - کل فروش ثبت‌شده: ۳۸.۱۲ میلیارد تومان (۳۸۱.۲ میلیارد ریال) در ۱۶۸ تراکنش طی ۸۸ روز کاری.
 - قدرت دوخت سفارشی (Bespoke): ۷۲.۱٪ از کل درآمد شو‌روم را به خود اختصاص داده است.`;
+
+// ==================== PERSISTENCE ====================
+const DB_FILE = path.join(resolvedDir, 'data', 'markova_data.json');
+try {
+  if (fs.existsSync(DB_FILE)) {
+    const rawData = fs.readFileSync(DB_FILE, 'utf8');
+    const parsed = JSON.parse(rawData);
+    if (parsed.employeesData) { employeesData.length = 0; employeesData.push(...parsed.employeesData); }
+    if (parsed.factsData) factsData = parsed.factsData;
+    if (parsed.summariesData) summariesData = parsed.summariesData;
+    if (parsed.fashionStylesData) fashionStylesData = parsed.fashionStylesData;
+    if (parsed.logoSettingsData) logoSettingsData = parsed.logoSettingsData;
+    if (parsed.documentsData) documentsData = parsed.documentsData;
+  }
+} catch (e) {
+  console.warn('Could not read markova_data.json:', e);
+}
+
+function saveMarkovaData() {
+  try {
+    const dir = path.dirname(DB_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(DB_FILE, JSON.stringify({
+      employeesData,
+      factsData,
+      summariesData,
+      fashionStylesData,
+      logoSettingsData,
+      documentsData
+    }, null, 2));
+  } catch (e) {
+    console.warn('Could not save markova_data.json:', e);
+  }
+}
 
 // ==================== API ROUTES ====================
 
@@ -560,6 +607,7 @@ app.post('/api/logo-settings', (req, res) => {
     watermarkOpacity: watermarkOpacity !== undefined ? Number(watermarkOpacity) : logoSettingsData.watermarkOpacity,
     watermarkEnabled: watermarkEnabled !== undefined ? Boolean(watermarkEnabled) : logoSettingsData.watermarkEnabled
   };
+  saveMarkovaData();
   res.json({ success: true, settings: logoSettingsData });
 });
 
@@ -584,12 +632,14 @@ app.post('/api/styles', (req, res) => {
   };
 
   fashionStylesData.unshift(newStyle);
+  saveMarkovaData();
   res.json({ success: true, style: newStyle });
 });
 
 app.delete('/api/styles/:id', (req, res) => {
   const styleId = req.params.id;
   fashionStylesData = fashionStylesData.filter(s => s.id !== styleId);
+  saveMarkovaData();
   res.json({ success: true });
 });
 
@@ -684,10 +734,10 @@ app.get('/api/engine-config', (req, res) => {
       keyMasked: process.env.GAPGPT_API_KEY ? `${process.env.GAPGPT_API_KEY.substring(0, 4)}...${process.env.GAPGPT_API_KEY.slice(-4)}` : '',
       defaultBaseUrl: process.env.GAPGPT_BASE_URL || 'https://api.gapgpt.com/v1',
       models: [
-        { id: 'gapgpt-qwen-3.8', name: 'GapGPT Qwen 3.8 (Primary Text)', type: 'text' },
+        { id: 'gpt-4o', name: 'OpenAI GPT-4o (Primary Text)', type: 'text' },
         { id: 'gapgpt/z-image', name: 'GapGPT Z-Image (Fast Postures)', type: 'fast_image' },
         { id: 'gpt-image-2', name: 'GPT Image 2 (HD Lookbooks & Fitting)', type: 'quality_image' },
-        { id: 'gpt-4o', name: 'OpenAI GPT-4o (via GapGPT)', type: 'text' },
+        { id: 'qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct (via GapGPT)', type: 'text' },
         { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet (via GapGPT)', type: 'text' }
       ]
     },
@@ -842,8 +892,9 @@ app.post('/api/engine-ping', async (req, res) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
-          model: process.env.GAPGPT_MODEL || 'gapgpt-qwen-3.8',
-          messages: [{ role: 'user', content: 'Reply with exactly: ping' }]
+          model: 'gpt-4o',
+          messages: [{ role: 'user', content: 'ping' }],
+          max_tokens: 5
         })
       });
       const latencyMs = Date.now() - startTime;
@@ -860,11 +911,14 @@ app.post('/api/engine-ping', async (req, res) => {
       if (!key) {
         return res.json({ success: false, latencyMs: 0, message: 'GEMINI_API_KEY is not configured in .env' });
       }
-      // Instantiate fresh to ensure latest env var is picked up if dynamic
-      const client = new GoogleGenAI({ apiKey: key });
+      const client = getAIClient();
+      if (!client) {
+        return res.json({ success: false, latencyMs: 0, message: 'Gemini client initialization failed' });
+      }
       await client.models.generateContent({
         model: 'gemini-2.0-flash',
-        contents: 'Reply with exactly: ping'
+        contents: 'ping',
+        config: { maxOutputTokens: 5 }
       });
       const latencyMs = Date.now() - startTime;
       return res.json({ success: true, latencyMs, message: `Connected (Gemini 2.0 Flash Online — ${latencyMs}ms)` });
@@ -879,8 +933,9 @@ app.post('/api/engine-ping', async (req, res) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
-          model: 'llama3-8b-8192', // Use a safer default for Groq ping
-          messages: [{ role: 'user', content: 'Reply with exactly: ping' }]
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: 'ping' }],
+          max_tokens: 5
         })
       });
       const latencyMs = Date.now() - startTime;
@@ -901,7 +956,8 @@ app.post('/api/engine-ping', async (req, res) => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
           model: 'qwen/qwen-2.5-72b-instruct',
-          messages: [{ role: 'user', content: 'Reply with exactly: ping' }]
+          messages: [{ role: 'user', content: 'ping' }],
+          max_tokens: 5
         })
       });
       const latencyMs = Date.now() - startTime;
@@ -1249,6 +1305,7 @@ ${empFacts || 'هیچ یادداشت خاصی ثبت نشده است.'}
     };
 
     summariesData.unshift(newSummary);
+    saveMarkovaData();
     res.json({ success: true, summary: newSummary });
   } catch (error: any) {
     console.error('Summary generation error:', error);

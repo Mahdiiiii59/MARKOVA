@@ -18,3 +18,4 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
+data/markova_data.json

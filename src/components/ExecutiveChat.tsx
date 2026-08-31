@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Trash2, Sun, Moon, Coffee, History, Plus, MessageSquare, Clock, ChevronRight, X, Sparkles } from 'lucide-react';
+import Markdown from 'react-markdown';
 import { ChatMessage, ChatSession } from '../types';
 
 interface ExecutiveChatProps {
@@ -69,10 +70,10 @@ export const ExecutiveChat: React.FC<ExecutiveChatProps> = ({
   const greeting = getPersianGreeting();
 
   const quickPrompts = [
-    { textFa: 'وضعیت سفارشات و پورسانت سعید', descFa: 'بررسی قرارداد ۱.۲۵۱ میلیاردی و کالیته‌های بیلا' },
-    { textFa: 'خلاصه ساختار فروش ۳۸.۱۲ میلیارد تومانی', descFa: 'تحلیل بازدهی دوخت سفارشی و نقدینگی' },
-    { textFa: 'وضعیت فاکتورهای پارچه میلان ایتالیا', descFa: 'سفارش پارچه‌های فاستونی سوپر ۱۵۰ تا ۱۸۰' },
-    { textFa: 'عملکرد مایکل، مصطفی و اسدی', descFa: 'گزارش سالن پرو، فروش آماده و تراز مالی' }
+    { textFa: 'بررسی وضعیت سفارشات جدید', descFa: 'گزارش‌گیری از سفارشات و فروش امروز' },
+    { textFa: 'تحلیل داده‌های مالی این ماه', descFa: 'بررسی میزان درآمد و جریان نقدینگی' },
+    { textFa: 'برنامه‌ریزی خرید متریال', descFa: 'تامین پارچه و مواد اولیه از تامین‌کنندگان' },
+    { textFa: 'بررسی عملکرد تیم فروش', descFa: 'تحلیل تارگت‌ها و پورسانت پرسنل' }
   ];
 
   return (
@@ -171,8 +172,8 @@ export const ExecutiveChat: React.FC<ExecutiveChatProps> = ({
                   }`}
                   dir="auto"
                 >
-                  <div className="whitespace-pre-wrap font-sans text-[13px] sm:text-[14px] bilingual-content leading-relaxed">
-                    {msg.content}
+                  <div className="markdown-body font-sans text-[13px] sm:text-[14px] bilingual-content leading-relaxed">
+                    <Markdown>{msg.content}</Markdown>
                   </div>
                 </div>
                 <div className="text-[10px] text-stone-500 mt-1 px-1 flex items-center gap-1.5 font-mono" dir="ltr">

@@ -57,11 +57,17 @@ export const PersonnelIntelligence: React.FC<PersonnelIntelligenceProps> = ({
                   : 'bg-stone-900/80 text-stone-300 border-stone-800 hover:border-stone-700 hover:text-white'
               }`}
             >
-              <img
-                src={emp.avatar}
-                alt={emp.name}
-                className="w-6 h-6 rounded-full object-cover border border-stone-950/40"
-              />
+              {emp.avatar ? (
+                <img
+                  src={emp.avatar}
+                  alt={emp.name}
+                  className="w-6 h-6 rounded-full object-cover border border-stone-950/40"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-stone-800 border border-stone-700 flex items-center justify-center">
+                  <span className="text-[10px] text-stone-400 font-bold">{emp.name.charAt(0)}</span>
+                </div>
+              )}
               <span>{emp.name}</span>
               <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-amber-700 text-amber-100' : 'bg-stone-950 text-stone-400'}`}>
                 {emp.facts?.length || 0}

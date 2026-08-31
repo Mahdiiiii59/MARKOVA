@@ -1,0 +1,600 @@
+import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import { GoogleGenAI } from '@google/genai';
+import { createServer as createViteServer } from 'vite';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const PORT = 3000;
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Multi-Provider AI Engine (Gemini, GapGPT, Groq, OpenRouter, MLX, Ollama)
+let aiClient: GoogleGenAI | null = null;
+function getAIClient() {
+  if (!aiClient) {
+    const key = process.env.GEMINI_API_KEY;
+    if (key) {
+      aiClient = new GoogleGenAI({ apiKey: key });
+    }
+  }
+  return aiClient;
+}
+
+// Dynamic Reserved Routing Matrix
+interface EngineRoutingState {
+  text: {
+    primaryProvider: string;
+    primaryModel: string;
+    fallback1Provider: string;
+    fallback1Model: string;
+    fallback2Provider: string;
+    fallback2Model: string;
+  };
+  fastImage: {
+    primaryProvider: string;
+    primaryModel: string;
+    fallbackProvider: string;
+    fallbackModel: string;
+  };
+  qualityImage: {
+    primaryProvider: string;
+    primaryModel: string;
+    fallbackProvider: string;
+    fallbackModel: string;
+  };
+}
+
+let engineRoutingConfig: EngineRoutingState = {
+  text: {
+    primaryProvider: 'gapgpt',
+    primaryModel: 'gapgpt-qwen-3.8',
+    fallback1Provider: 'gemini',
+    fallback1Model: 'gemini-2.0-flash',
+    fallback2Provider: 'groq',
+    fallback2Model: 'llama-3.3-70b-versatile'
+  },
+  fastImage: {
+    primaryProvider: 'gapgpt',
+    primaryModel: 'gapgpt/z-image',
+    fallbackProvider: 'gemini',
+    fallbackModel: 'imagen-3.0-generate-002'
+  },
+  qualityImage: {
+    primaryProvider: 'gapgpt',
+    primaryModel: 'gpt-image-2',
+    fallbackProvider: 'fal',
+    fallbackModel: 'fal-ai/flux/dev'
+  }
+};
+
+interface AICallOptions {
+  prompt: string;
+  systemInstruction?: string;
+  temperature?: number;
+  maxTokens?: number;
+}
+
+interface AIResponseResult {
+  text: string;
+  provider: string;
+  model: string;
+}
+
+// Helper to call individual providers by ID
+async function callSpecificTextProvider(providerId: string, modelOverride?: string, options?: AICallOptions): Promise<AIResponseResult | null> {
+  const { prompt = '', systemInstruction = '', temperature = 0.3, maxTokens = 1000 } = options || {};
+
+  if (providerId === 'gapgpt') {
+    const gapgptKey = process.env.GAPGPT_API_KEY;
+    if (!gapgptKey) return null;
+    const baseUrl = (process.env.GAPGPT_BASE_URL || 'https://api.gapgpt.com/v1').replace(/\/+$/, '');
+    const model = modelOverride || engineRoutingConfig.text.primaryModel || 'gapgpt-qwen-3.8';
+    const messages: any[] = [];
+    if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+    messages.push({ role: 'user', content: prompt });
+
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${gapgptKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json() as any;
+      const text = data?.choices?.[0]?.message?.content;
+      if (text) return { text: text.trim(), provider: 'GapGPT', model };
+    }
+    return null;
+  }
+
+  if (providerId === 'gemini') {
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return null;
+    const client = getAIClient();
+    if (!client) return null;
+    const model = modelOverride || 'gemini-2.0-flash';
+    const response = await client.models.generateContent({
+      model,
+      contents: prompt,
+      config: {
+        systemInstruction: systemInstruction || undefined,
+        temperature,
+        maxOutputTokens: maxTokens
+      }
+    });
+    if (response && response.text) {
+      return { text: response.text.trim(), provider: 'Google Gemini', model };
+    }
+    return null;
+  }
+
+  if (providerId === 'groq') {
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) return null;
+    const model = modelOverride || 'llama-3.3-70b-versatile';
+    const messages: any[] = [];
+    if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+    messages.push({ role: 'user', content: prompt });
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${groqKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json() as any;
+      const text = data?.choices?.[0]?.message?.content;
+      if (text) return { text: text.trim(), provider: 'Groq', model };
+    }
+    return null;
+  }
+
+  if (providerId === 'openrouter') {
+    const openrouterKey = process.env.OPENROUTER_API_KEY;
+    if (!openrouterKey) return null;
+    const model = modelOverride || 'qwen/qwen-2.5-72b-instruct';
+    const messages: any[] = [];
+    if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+    messages.push({ role: 'user', content: prompt });
+
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openrouterKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json() as any;
+      const text = data?.choices?.[0]?.message?.content;
+      if (text) return { text: text.trim(), provider: 'OpenRouter', model };
+    }
+    return null;
+  }
+
+  if (providerId === 'mlx') {
+    const mlxUrl = process.env.MLX_SERVER_URL || 'http://localhost:8080/v1';
+    const messages: any[] = [];
+    if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+    messages.push({ role: 'user', content: prompt });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    try {
+      const res = await fetch(`${mlxUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages, temperature, max_tokens: maxTokens }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json() as any;
+        const text = data?.choices?.[0]?.message?.content;
+        if (text) return { text: text.trim(), provider: 'Local Apple Silicon MLX', model: 'mlx-local' };
+      }
+    } catch {
+      clearTimeout(timeoutId);
+    }
+    return null;
+  }
+
+  if (providerId === 'ollama') {
+    const ollamaUrl = process.env.OLLAMA_SERVER_URL || 'http://localhost:11434/v1';
+    const messages: any[] = [];
+    if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+    messages.push({ role: 'user', content: prompt });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    try {
+      const res = await fetch(`${ollamaUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelOverride || process.env.OLLAMA_MODEL_NAME || 'llama3.1:8b',
+          messages,
+          temperature,
+          max_tokens: maxTokens
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json() as any;
+        const text = data?.choices?.[0]?.message?.content;
+        if (text) return { text: text.trim(), provider: 'Local Ollama', model: modelOverride || 'llama3.1:8b' };
+      }
+    } catch {
+      clearTimeout(timeoutId);
+    }
+    return null;
+  }
+
+  return null;
+}
+
+// Master Multi-Provider Chain Execution for Text
+async function callAIMultiProvider(options: AICallOptions): Promise<AIResponseResult | null> {
+  // 1. Primary Provider
+  const primary = engineRoutingConfig.text.primaryProvider;
+  const primaryModel = engineRoutingConfig.text.primaryModel;
+  try {
+    const res1 = await callSpecificTextProvider(primary, primaryModel, options);
+    if (res1) return res1;
+  } catch (e) {
+    console.warn(`Primary text provider ${primary} failed, testing fallbacks...`, e);
+  }
+
+  // 2. Reserved Fallback 1
+  const fb1 = engineRoutingConfig.text.fallback1Provider;
+  const fb1Model = engineRoutingConfig.text.fallback1Model;
+  if (fb1 && fb1 !== primary) {
+    try {
+      const res2 = await callSpecificTextProvider(fb1, fb1Model, options);
+      if (res2) return res2;
+    } catch (e) {
+      console.warn(`Fallback 1 text provider ${fb1} failed...`, e);
+    }
+  }
+
+  // 3. Reserved Fallback 2
+  const fb2 = engineRoutingConfig.text.fallback2Provider;
+  const fb2Model = engineRoutingConfig.text.fallback2Model;
+  if (fb2 && fb2 !== primary && fb2 !== fb1) {
+    try {
+      const res3 = await callSpecificTextProvider(fb2, fb2Model, options);
+      if (res3) return res3;
+    } catch (e) {
+      console.warn(`Fallback 2 text provider ${fb2} failed...`, e);
+    }
+  }
+
+  // 4. Any remaining provider scan
+  const allProviders = ['gapgpt', 'gemini', 'groq', 'openrouter', 'mlx', 'ollama'];
+  for (const p of allProviders) {
+    if (p !== primary && p !== fb1 && p !== fb2) {
+      try {
+        const fallbackRes = await callSpecificTextProvider(p, undefined, options);
+        if (fallbackRes) return fallbackRes;
+      } catch {}
+    }
+  }
+
+  return null;
+}
+
+// Master Multi-Provider Image Generation Engine (Supporting GapGPT z-image & gpt-image-2)
+interface ImageGenOptions {
+  prompt: string;
+  category?: string;
+  aspectRatio?: string;
+  tier?: 'fast' | 'quality';
+}
+
+interface ImageGenResult {
+  imageUrl: string;
+  providerUsed: string;
+  modelUsed: string;
+  isFallback: boolean;
+}
+
+const curatedHighFashionPresets = [
+  'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=900&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?w=900&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=900&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1598808503746-f34c53b9323e?w=900&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=900&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=900&auto=format&fit=crop&q=80'
+];
+
+async function generateAIMultiProviderImage(options: ImageGenOptions): Promise<ImageGenResult> {
+  const { prompt, category, tier = 'fast' } = options;
+  const config = tier === 'quality' ? engineRoutingConfig.qualityImage : engineRoutingConfig.fastImage;
+
+  // 1. Try Primary Image Provider
+  if (config.primaryProvider === 'gapgpt') {
+    const gapgptKey = process.env.GAPGPT_API_KEY;
+    if (gapgptKey) {
+      try {
+        const baseUrl = (process.env.GAPGPT_BASE_URL || 'https://api.gapgpt.com/v1').replace(/\/+$/, '');
+        const model = config.primaryModel || (tier === 'quality' ? 'gpt-image-2' : 'gapgpt/z-image');
+        const res = await fetch(`${baseUrl}/images/generations`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${gapgptKey}`
+          },
+          body: JSON.stringify({
+            model,
+            prompt,
+            n: 1,
+            size: '1024x1024',
+            response_format: 'url'
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json() as any;
+          const imgUrl = data?.data?.[0]?.url || (data?.data?.[0]?.b64_json ? `data:image/png;base64,${data.data[0].b64_json}` : null);
+          if (imgUrl) {
+            return {
+              imageUrl: imgUrl,
+              providerUsed: 'GapGPT Visual Engine',
+              modelUsed: model,
+              isFallback: false
+            };
+          }
+        } else {
+          console.warn(`GapGPT Image API error ${res.status}:`, await res.text());
+        }
+      } catch (e) {
+        console.warn('GapGPT Image generation failed, moving to fallback:', e);
+      }
+    }
+  }
+
+  // 2. Try Fal.ai Provider
+  if (config.primaryProvider === 'fal' || config.fallbackProvider === 'fal') {
+    const falKey = process.env.FAL_KEY;
+    if (falKey) {
+      try {
+        const falModel = config.primaryProvider === 'fal' ? config.primaryModel : config.fallbackModel;
+        const targetModel = falModel || (tier === 'quality' ? 'fal-ai/flux/dev' : 'fal-ai/flux/schnell');
+        const res = await fetch(`https://fal.run/${targetModel}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Key ${falKey}`
+          },
+          body: JSON.stringify({
+            prompt,
+            image_size: 'square_hd',
+            num_images: 1
+          })
+        });
+        if (res.ok) {
+          const data = await res.json() as any;
+          const imgUrl = data?.images?.[0]?.url;
+          if (imgUrl) {
+            return {
+              imageUrl: imgUrl,
+              providerUsed: 'Fal.ai (Flux)',
+              modelUsed: targetModel,
+              isFallback: false
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('Fal.ai image error:', e);
+      }
+    }
+  }
+
+  // 3. Fallback to Curated High Sartorial Studio Preset
+  const randomPreset = curatedHighFashionPresets[Math.floor(Math.random() * curatedHighFashionPresets.length)];
+  return {
+    imageUrl: randomPreset,
+    providerUsed: 'MARKOVA Studio Preset Visualizer',
+    modelUsed: 'Sartorial High-Fashion Preset (Offline Fallback)',
+    isFallback: true
+  };
+}
+
+// Ensure Local Models directories exist
+const localModelDir = path.join(process.cwd(), 'MARKOVA', 'Model');
+const modelsDir = path.join(process.cwd(), 'Models');
+try {
+  if (!fs.existsSync(localModelDir)) fs.mkdirSync(localModelDir, { recursive: true });
+  if (!fs.existsSync(modelsDir)) fs.mkdirSync(modelsDir, { recursive: true });
+} catch (e) {
+  console.warn('Local Model dir check:', e);
+}
+
+// In-Memory Staff Data in Persian with Internal Coaching Advisor Heuristics
+const employeesData = [
+  {
+    id: 1,
+    name: 'سعید',
+    role: 'فروشنده تخصصی دوخت سفارشی (Bespoke)',
+    dept: 'سفارشات VIP و سازمان‌های دیپلماتیک',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    notes: 'متخصص دوخت سفارشی با پارچه‌های فاستونی سوپر ۱۵۰ تا ۱۸۰ ایتالیایی و بریتانیایی، اندازه‌گیری‌های VIP.',
+    coachingAdvisor: {
+      motivationKey: 'تقدیر از جایگاه VIP و پاداش درصدی قراردادهای میلیاردی سفارشی (مانند معامله ۱.۲۵۱ میلیارد تومانی).',
+      riskMitigation: 'رزرو زودهنگام کالیته‌های فاستونی میلان برای جلوگیری از تاخیر حمل‌ونقل هوایی.',
+      communicationStyle: 'مقتدرانه، مستقیم، مشاوره‌ای و الهام‌بخش.',
+      growthTarget: 'توسعه پورتفولیوی مشتریان دیپلماتیک و مدیران ارشد هلدینگ‌ها.'
+    }
+  },
+  {
+    id: 2,
+    name: 'مایکل',
+    role: 'فروشنده شو‌روم',
+    dept: 'مدیریت سالن و هماهنگی پرو با خیاط ارشد',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    notes: 'سرعت عمل بالا در هماهنگی اصلاحات سالن، انتخاب آسترهای ابریشمی خاص و رضایت مشتریان.',
+    coachingAdvisor: {
+      motivationKey: 'قدردانی از هماهنگی دقیق با خیاط ارشد در تحویل فوری تاکسیدوهای رویدادها.',
+      riskMitigation: 'ایجاد بازه امن ۴۸ ساعته برای سفارشات فشرده پرو آخر هفته.',
+      communicationStyle: 'عمل‌گرایانه، مثبت، سریع و قدردان.',
+      growthTarget: 'تبدیل ۳۰٪ از مشتریان خدمات اصلاحات به سفارشات کامل دوخت سفارشی.'
+    }
+  },
+  {
+    id: 3,
+    name: 'مصطفی',
+    role: 'فروشنده البسه آماده (Ready-to-Wear)',
+    dept: 'فروش کت‌های تک فصلی و اکسسوری ابریشمی',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    notes: 'گردش سریع موجودی انبار، فروش کت‌های تک پشمی و باندلینگ اکسسوری‌های لوکس ابریشمی.',
+    coachingAdvisor: {
+      motivationKey: 'مشوق‌های درصدی برای حجم فروش کت‌های تک + فروش مکمل اکسسوری‌های ابریشمی با حاشیه سود بالا.',
+      riskMitigation: 'پیشگیری از رکود پارچه‌های فصلی با ارائه پکیج‌های پیشنهادی جذاب.',
+      communicationStyle: 'انگیزه‌بخش، صمیمی، متمرکز بر تارگت‌های عددی.',
+      growthTarget: 'فروش مکمل کراوات، پوشت و پاپیون با هر دست کت‌وشلوار آماده.'
+    }
+  },
+  {
+    id: 4,
+    name: 'اسدی',
+    role: 'حسابدار ارشد',
+    dept: 'ممیزی فاکتورهای پارچه، تسویه ارزی و حقوق و دستمزد',
+    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+    notes: 'محاسبه عوارض گمرکی پارچه، تسویه دستمزد خیاطان، حسابرسی روزانه و جریان نقدینگی.',
+    coachingAdvisor: {
+      motivationKey: 'ارزش‌گذاری بر تراز مالی کامپکت و بدون مغایرت و مدیریت ریسک نوسان ارزی.',
+      riskMitigation: 'محافظت از نقدینگی در برابر نوسانات ارزی واردات پارچه و اصلاحات تعرفه‌ای.',
+      communicationStyle: 'دقیق، تحلیلی، آرام و ساختاریافته.',
+      growthTarget: 'اتوماسیون هفتگی مغایرت‌گیری کمیسیون‌های فروش شو‌روم با دفتر کل مالی.'
+    }
+  }
+];
+
+let factsData = [
+  { id: 1, employeeId: 1, factText: 'سعید قرارداد دوخت ۵ دست کت‌وشلوار سفارشی فاستونی سوپر ۱۶۰ را با هیئت دیپلماتیک با موفقیت نهایی کرد (مبلغ ۱.۲۵۱ میلیارد تومان).', category: 'performance', createdAt: '2026-08-28 14:30' },
+  { id: 2, employeeId: 1, factText: 'درخواست کالیته‌های جدید پارچه سرمه‌ای تیره سوپر ۱۶۰ از کارخانه بیلا ایتالیا توسط سعید ثبت شد.', category: 'client_fitting', createdAt: '2026-08-29 11:15' },
+  { id: 3, employeeId: 2, factText: 'مایکل با خیاط ارشد هماهنگی کرد تا اصلاحات ۴ دست تاکسیدو برای گالای آخر هفته در کوتاه‌ترین زمان تحویل داده شود.', category: 'performance', createdAt: '2026-08-27 16:45' },
+  { id: 4, employeeId: 3, factText: 'مصطفی به رکورد ۱۵٪ بالاتر از سهمیه فروش هفتگی کت‌های تک و اکسسوری‌های ابریشمی دست یافت.', category: 'performance', createdAt: '2026-08-29 18:20' },
+  { id: 5, employeeId: 4, factText: 'اسدی کلیه پرداخت‌ها و فاکتورهای واردات پارچه فاستونی سه‌ماهه سوم را بدون کوچک‌ترین مغایرت حسابرسی و تسویه کرد.', category: 'financial', createdAt: '2026-08-30 10:00' }
+];
+
+let summariesData = [
+  {
+    id: 1,
+    employeeId: 1,
+    summaryText: `سمت سازمانی: فروشنده تخصصی دوخت سفارشی (Bespoke) و حساب‌های VIP
+رویدادها و به‌روزرسانی‌های اخیر: نهایی کردن سفارش دیپلماتیک ۵ دست کت‌وشلوار سفارشی (۱.۲۵۱ میلیارد تومان) و درخواست کالیته‌های سوپر ۱۶۰ سرمه‌ای کارخانه بیلا ایتالیا.
+ارزیابی عملکرد: سطح فوق‌العاده عالی و فراتر از تارگت‌های فصلی.
+پروژه و ماموریت جاری: کمپین دوخت سفارشی پاییزه مدیران ارشد و چهره‌های شاخص.
+ساختار حقوق و پورسانت: حقوق ثابت ارشد + ۶٪ کمیسیون مستقیم دوخت سفارشی (معادل ۷۵ میلیون تومان در سفارش اخیر).
+نقاط قوت برجسته: دقت بسیار بالا در اندازه‌گیری، وفاداری شدید مشتریان VIP و تسلط بر پارچه‌های لوکس بین‌المللی.
+ریسک‌ها و چالش‌های محتمل: ریسک تاخیر احتمالی در ارسال کالیته‌های جدید از ایتالیا.
+اقدامات و توصیه‌های مربی‌گری پیشنهادی: در اختیار گذاشتن انحصاری کاتالوگ پارچه‌های پشمی هادرزفیلد انگلستان به سعید جهت ارتقای انگیزه و گسترش معاملات VIP.`,
+    modelUsed: 'سارا (مشاور هوشمند مارکووا)',
+    createdAt: '2026-08-29 17:00'
+  }
+];
+
+// In-Memory Fashion Styles Memory with Simple Names
+let fashionStylesData = [
+  {
+    id: 'style-1',
+    name: 'Navy Double-Breasted Suit',
+    category: 'bespoke_suit',
+    description: 'Classic double-breasted cut with peak lapels.',
+    fabricDetails: 'Super 160s Navy Wool',
+    colorPalette: ['#0f172a', '#1e293b', '#d97706'],
+    sampleImages: [
+      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?w=600&auto=format&fit=crop&q=80'
+    ],
+    createdAt: '2026-08-29'
+  },
+  {
+    id: 'style-2',
+    name: 'Black-Tie Tuxedo',
+    category: 'tuxedo',
+    description: 'Evening tuxedo with silk grosgrain shawl collar.',
+    fabricDetails: 'Midnight Wool & Silk Blend',
+    colorPalette: ['#09090b', '#27272a', '#e2e8f0'],
+    sampleImages: [
+      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=600&auto=format&fit=crop&q=80'
+    ],
+    createdAt: '2026-08-30'
+  },
+  {
+    id: 'style-3',
+    name: 'Camel Cashmere Coat',
+    category: 'overcoat',
+    description: 'Single-breasted luxury overcoat with soft drape.',
+    fabricDetails: 'Pure Mongolian Cashmere',
+    colorPalette: ['#b45309', '#78350f', '#fef3c7'],
+    sampleImages: [
+      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&auto=format&fit=crop&q=80'
+    ],
+    createdAt: '2026-08-30'
+  }
+];
+
+// Custom Logo Settings Memory
+let logoSettingsData = {
+  customLogoUrl: null,
+  watermarkOpacity: 0.025,
+  watermarkEnabled: true
+};
+
+// Showroom Business Data & Memory
+let latestBusinessAnalysis = `Showroom Financial Audit (Extracted Ledger):
+- Total Recorded Sales: 38.12 Billion Tomans (381.2B Rials) across 168 transactions in 88 sales days.
+- Average Transaction: 226.9 Million Tomans; Median Basket: 139.55 Million Tomans.
+- Revenue Driver: Commission-eligible bespoke orders account for 72.1% of total revenue despite being only 50% of transactions.
+- Peak Transaction: 1.251 Billion Tomans closed by Saeid (Diplomatic Mission bespoke order).
+- Recommendation: Focus fabric inventory on Super 150s-180s wools as bespoke yields 3.2x higher margin than RTW.`;
+
+let documentsData = [
+  {
+    id: 1,
+    filename: 'Q3_Showroom_Sales_Ledger.csv',
+    fileType: '.csv',
+    fileSize: 4820,
+    employeeId: null,
+    employeeName: 'General Business',
+    topic: 'Sales & Financial Ledger',
+    extractedText: `Item,Category,Salesman,Quantity,Unit Price,Total
+Navy Super 150s Bespoke 2-Piece,Bespoke,Saeid,3,1450,4350
+Charcoal Double-Breasted Flannel,Bespoke,Saeid,2,1600,3200
+Midnight Blue Slim Tuxedo,Ready-to-Wear,Micheal,4,750,3000

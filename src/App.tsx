@@ -9,49 +9,7 @@ import { MarkovaWatermarkBackground, LogoSettingsModal } from './components/Mark
 import { Employee, ChatMessage, ChatSession, DocumentRecord, FashionStyle, LogoSettings } from './types';
 
 // Initial default sessions
-const initialChatSessions: ChatSession[] = [
-  {
-    id: 'session-1',
-    title: 'تحلیل فروش شو‌روم و سفارشات سفارشی',
-    titleFa: 'تحلیل فروش شو‌روم و سفارشات سفارشی',
-    createdAt: 'امروز، ۱۰:۳۰',
-    messages: [
-      {
-        id: 'msg-1',
-        role: 'assistant',
-        content: `سلام نیما جان! روزت بخیر و پر از موفقیت و انرژی مثبت. من سارا هستم، مشاور و دستیار هوشمند شما در مارکووا.
-
-تمام داده‌های مالی شو‌روم (فروش ۳۸.۱۲ میلیارد تومانی)، پرونده پرسنلی همکاران (سعید، مایکل، مصطفی و آقای اسدی) و استودیوی خلاق بصری آماده و در دسترس شما هستند. امروز روی چه موضوعی با هم کار کنیم؟`,
-        source: 'سارا (مشاور هوشمند مارکووا)',
-        timestamp: '10:30'
-      }
-    ]
-  },
-  {
-    id: 'session-2',
-    title: 'استراتژی کمیسیون دوخت سفارشی سعید',
-    titleFa: 'استراتژی کمیسیون دوخت سفارشی سعید',
-    createdAt: 'دیروز، ۱۷:۴۵',
-    messages: [
-      {
-        id: 'msg-2-1',
-        role: 'user',
-        content: 'وضعیت سفارش سفارشی سفارت و انگیزه سعید چطور است؟',
-        timestamp: '17:45'
-      },
-      {
-        id: 'msg-2-2',
-        role: 'assistant',
-        content: `نیما جان، گزارش عملکرد سعید در سفارش دیپلماتیک فوق‌العاده است:
-- مبلغ سفارش: ۱.۲۵۱ میلیارد تومان (۵ دست کت‌وشلوار دست‌دوز فاستونی سوپر ۱۶۰).
-- درصد پورسانت: بر اساس ساختار ۶٪ دوخت سفارشی، معادل ۷۵ میلیون تومان.
-- مشاوره مربی‌گری سارا: برای تقویت روحیه سعید، پیشنهاد می‌شود تخصیص پارچه‌های جدید هادرزفیلد مستقیماً با نظارت او انجام شود تا انگیزه او در جذب مشتریان VIP بیش از پیش اوج بگیرد.`,
-        source: 'سارا (مشاور هوشمند مارکووا)',
-        timestamp: '17:46'
-      }
-    ]
-  }
-];
+const initialChatSessions: ChatSession[] = [];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'studio' | 'employees' | 'documents' | 'system'>('chat');
@@ -82,7 +40,7 @@ export default function App() {
     }
   });
 
-  const [activeSessionId, setActiveSessionId] = useState<string>(sessions[0]?.id || 'session-1');
+  const [activeSessionId, setActiveSessionId] = useState<string>(sessions[0]?.id || '');
 
   // Save sessions to localStorage
   useEffect(() => {

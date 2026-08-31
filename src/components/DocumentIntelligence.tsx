@@ -42,37 +42,21 @@ export const DocumentIntelligence: React.FC<DocumentIntelligenceProps> = ({
 
   // Base Sales Data (Extracted Ledger in Tomans standard)
   const salesMetrics = {
-    totalSalesTomans: 38.12, // billion Tomans
-    transactions: 168,
-    salesDays: 88,
-    avgTransactionTomans: 226.9, // million Tomans
-    medianBasketTomans: 139.55, // million Tomans
-    largestTransactionTomans: 1.251, // billion Tomans
-    avgDailySalesTomans: 433.2, // million Tomans
-    medianDailySalesTomans: 327.0, // million Tomans
-    commissionEligiblePct: 50.0,
-    eligibleSalesSharePct: 72.1
+    totalSalesTomans: 0,
+    transactions: 0,
+    salesDays: 0,
+    avgTransactionTomans: 0,
+    medianBasketTomans: 0,
+    largestTransactionTomans: 0,
+    avgDailySalesTomans: 0,
+    medianDailySalesTomans: 0,
+    commissionEligiblePct: 0,
+    eligibleSalesSharePct: 0
   };
 
-  const monthlyTrend = [
-    { month: 'اردیبهشت (Ordibehesht / May)', salesTomans: 7.8, deals: 34, growth: '+12%' },
-    { month: 'خرداد (Khordad / June)', salesTomans: 9.4, deals: 42, growth: '+20.5%' },
-    { month: 'تیر (Tir / July)', salesTomans: 8.6, deals: 38, growth: '-8.5%' },
-    { month: 'مرداد (Mordad / August)', salesTomans: 12.32, deals: 54, growth: '+43.2%' }
-  ];
-
-  const biggestDays = [
-    { date: '۱۴ مرداد (Aug 5)', totalTomans: '۱.۲۵۱ میلیارد تومان', items: 'سفارش اختصاصی ۵ دست کت‌شلوار دیپلماتیک', salesman: 'سعید (Saeid)' },
-    { date: '۲۲ مرداد (Aug 13)', totalTomans: '۹۴۰ میلیون تومان', items: 'تاکسیدوهای سفارشی و آسترهای ابریشم', salesman: 'سعید و مایکل (Saeid & Micheal)' },
-    { date: '۲۹ خرداد (Jun 19)', totalTomans: '۷۸۵ میلیون تومان', items: 'سفارش عمده بلیزر آماده سازمانی', salesman: 'مصطفی (Mostafa)' }
-  ];
-
-  const amountDistribution = [
-    { label: 'کمتر از ۵۰ میلیون تومان (اکسسوری و کت تک)', count: 42, pct: 25 },
-    { label: '۵۰ تا ۱۵۰ میلیون تومان (کت‌وشلوار روتین)', count: 68, pct: 40.5 },
-    { label: '۱۵۰ تا ۵۰۰ میلیون تومان (سفارشی‌دوزی دو‌تکه)', count: 44, pct: 26.2 },
-    { label: 'بیش از ۵۰۰ میلیون تومان (کشمیر و کمد کامل VIP)', count: 14, pct: 8.3 }
-  ];
+  const monthlyTrend: any[] = [];
+  const biggestDays: any[] = [];
+  const amountDistribution: any[] = [];
 
   // Automatic Rial to Toman Parser & Normalizer
   const processAndNormalizeFile = async (file: File) => {
