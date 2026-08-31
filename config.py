@@ -49,10 +49,17 @@ MLX_SERVER_PORT = 8080
 OLLAMA_SERVER_URL = "http://localhost:11434/v1"
 OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", "llama3.1:8b")
 
-# API Keys (Loaded from .env)
+# API Keys & Cloud Endpoints (Loaded from .env)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GAPGPT_API_KEY = os.getenv("GAPGPT_API_KEY", "")
+GAPGPT_BASE_URL = os.getenv("GAPGPT_BASE_URL", "https://api.gapgpt.com/v1")
+GAPGPT_MODEL = os.getenv("GAPGPT_MODEL", "gapgpt-qwen-3.8")
+GAPGPT_IMAGE_FAST_MODEL = os.getenv("GAPGPT_IMAGE_FAST_MODEL", "gapgpt/z-image")
+GAPGPT_IMAGE_QUALITY_MODEL = os.getenv("GAPGPT_IMAGE_QUALITY_MODEL", "gpt-image-2")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+FAL_KEY = os.getenv("FAL_KEY", "")
+CLOUDINARY_URL = os.getenv("CLOUDINARY_URL", "")
 
 # Hermes Agent Persona Blueprint
 SYSTEM_PERSONALITY = f"""# AGENTS.md — MARKOVA AI Core Identity

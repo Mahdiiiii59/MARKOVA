@@ -30,15 +30,15 @@ Executive UI (Streamlit / Web Applet)
 ## 🚀 Quick Launch
 
 ### Windows
-- Double-click **`Run_MARKOVA.bat`** (pulls updates, verifies dependencies, and launches).
-- Or run `Start_MARKOVA.bat` for an instant start without checking git.
+- Double-click **`Run_MARKOVA.bat`** (displays the NEXURA AI Lab banner, checks environment, and launches the full-stack React 19 + Express application at `http://localhost:3000`).
 
-### macOS
-- Double-click **`Run_MARKOVA.command`** (or execute `./Run_MARKOVA.command`).
+### macOS / Linux
+- Double-click **`Run_MARKOVA.command`** (or execute `./Run_MARKOVA.command` in terminal).
 
 ### Manual CLI
 ```bash
-python bootstrap.py
+npm run dev
+# or: python bootstrap.py
 ```
 
 ---

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Terminal,
   Copy,
@@ -17,8 +17,19 @@ import {
   SlidersHorizontal,
   Compass,
   AlertCircle,
-  Cpu
+  Cpu,
+  RefreshCw,
+  Zap,
+  CheckCircle2,
+  XCircle,
+  ArrowRight,
+  Shield,
+  Eye,
+  EyeOff,
+  Image as ImageIcon,
+  MessageSquare
 } from 'lucide-react';
+import { ProviderDiagnostic, ReservedEngineRouting, ApiKeysPayload } from '../types';
 
 interface EndpointSpec {
   method: 'GET' | 'POST' | 'DELETE';
@@ -31,17 +42,239 @@ interface EndpointSpec {
 }
 
 export const SystemHub: React.FC = () => {
-  const [activeSubTab, setActiveSubTab] = useState<'apis' | 'telemetry' | 'future_guide' | 'scripts'>('apis');
+  const [activeSubTab, setActiveSubTab] = useState<'routing' | 'apis' | 'telemetry' | 'future_guide' | 'scripts'>('routing');
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [selectedEndpoint, setSelectedEndpoint] = useState<number>(0);
   const [selectedScriptFile, setSelectedScriptFile] = useState<string>('app.py');
+
+  // Reserved Routing State
+  const [routingConfig, setRoutingConfig] = useState<ReservedEngineRouting>({
+    text: {
+      primaryProvider: 'gapgpt',
+      primaryModel: 'gapgpt-qwen-3.8',
+      fallback1Provider: 'gemini',
+      fallback1Model: 'gemini-2.0-flash',
+      fallback2Provider: 'groq',
+      fallback2Model: 'llama-3.3-70b-versatile'
+    },
+    fastImage: {
+      primaryProvider: 'gapgpt',
+      primaryModel: 'gapgpt/z-image',
+      fallbackProvider: 'gemini',
+      fallbackModel: 'imagen-3.0-generate-002'
+    },
+    qualityImage: {
+      primaryProvider: 'gapgpt',
+      primaryModel: 'gpt-image-2',
+      fallbackProvider: 'fal',
+      fallbackModel: 'fal-ai/flux/dev'
+    }
+  });
+
+  // Providers List & Diagnostics
+  const [providers, setProviders] = useState<ProviderDiagnostic[]>([
+    {
+      id: 'gapgpt',
+      name: 'GapGPT Unified Gateway',
+      category: 'cloud_llm',
+      isConfigured: true,
+      isReachable: null,
+      requiresKey: true,
+      models: [
+        { id: 'gapgpt-qwen-3.8', name: 'GapGPT Qwen 3.8 (Primary Text)', type: 'text' },
+        { id: 'gapgpt/z-image', name: 'GapGPT Z-Image (Fast Postures)', type: 'fast_image' },
+        { id: 'gpt-image-2', name: 'GPT Image 2 (HD Lookbooks & Fitting)', type: 'quality_image' }
+      ]
+    },
+    {
+      id: 'gemini',
+      name: 'Google Gemini Studio',
+      category: 'cloud_llm',
+      isConfigured: true,
+      isReachable: null,
+      requiresKey: true,
+      models: [
+        { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Fast Reasoning)', type: 'text' },
+        { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Deep Analysis)', type: 'text' },
+        { id: 'imagen-3.0-generate-002', name: 'Imagen 3 (Visual Fashion)', type: 'fast_image' }
+      ]
+    },
+    {
+      id: 'groq',
+      name: 'Groq Ultra-Fast LPU',
+      category: 'cloud_llm',
+      isConfigured: false,
+      isReachable: null,
+      requiresKey: true,
+      models: [
+        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile (Free Tier)', type: 'text' }
+      ]
+    },
+    {
+      id: 'openrouter',
+      name: 'OpenRouter Aggregator',
+      category: 'cloud_llm',
+      isConfigured: false,
+      isReachable: null,
+      requiresKey: true,
+      models: [
+        { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct', type: 'text' }
+      ]
+    },
+    {
+      id: 'mlx',
+      name: 'Apple Silicon MLX Server (Local)',
+      category: 'local_engine',
+      isConfigured: true,
+      isReachable: null,
+      requiresKey: false,
+      models: [
+        { id: 'mlx-community/DeepSeek-R1-Distill-Qwen-8B-4bit', name: 'DeepSeek R1 Distill Qwen 8B', type: 'text' }
+      ]
+    },
+    {
+      id: 'ollama',
+      name: 'Local Ollama Engine',
+      category: 'local_engine',
+      isConfigured: true,
+      isReachable: null,
+      requiresKey: false,
+      models: [
+        { id: 'llama3.1:8b', name: 'Llama 3.1 8B (Local)', type: 'text' }
+      ]
+    },
+    {
+      id: 'fal',
+      name: 'Fal.ai Visual Cloud',
+      category: 'cloud_image',
+      isConfigured: false,
+      isReachable: null,
+      requiresKey: true,
+      models: [
+        { id: 'fal-ai/flux/schnell', name: 'Flux.1 Schnell', type: 'fast_image' },
+        { id: 'fal-ai/flux/dev', name: 'Flux.1 Dev', type: 'quality_image' }
+      ]
+    }
+  ]);
+
+  const [apiKeysInput, setApiKeysInput] = useState<ApiKeysPayload>({
+    GAPGPT_API_KEY: '',
+    GAPGPT_BASE_URL: '',
+    GEMINI_API_KEY: '',
+    GROQ_API_KEY: '',
+    OPENROUTER_API_KEY: '',
+    FAL_KEY: ''
+  });
+  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+  const [isPinging, setIsPinging] = useState<Record<string, boolean>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
+  // Fetch initial config from server
+  const fetchEngineConfig = async () => {
+    try {
+      const res = await fetch('/api/engine-config');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.routing) setRoutingConfig(data.routing);
+        if (data.providers) setProviders(data.providers);
+      }
+    } catch (e) {
+      console.warn('Failed to load engine config:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchEngineConfig();
+  }, []);
+
+  // Ping a single provider
+  const pingProvider = async (providerId: string) => {
+    setIsPinging(prev => ({ ...prev, [providerId]: true }));
+    try {
+      const res = await fetch('/api/engine-ping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providerId })
+      });
+      const data = await res.json();
+      setProviders(prev => prev.map(p => {
+        if (p.id === providerId) {
+          return {
+            ...p,
+            isReachable: data.success,
+            latencyMs: data.latencyMs,
+            statusMessage: data.message
+          };
+        }
+        return p;
+      }));
+    } catch (e: any) {
+      setProviders(prev => prev.map(p => {
+        if (p.id === providerId) {
+          return {
+            ...p,
+            isReachable: false,
+            latencyMs: 0,
+            statusMessage: e.message || 'Connection failed'
+          };
+        }
+        return p;
+      }));
+    } finally {
+      setIsPinging(prev => ({ ...prev, [providerId]: false }));
+    }
+  };
+
+  // Ping all providers at once
+  const pingAllProviders = async () => {
+    for (const p of providers) {
+      pingProvider(p.id);
+    }
+  };
+
+  // Save updated routing and keys
+  const handleSaveRoutingAndKeys = async () => {
+    setIsSaving(true);
+    setSaveStatus(null);
+    try {
+      const filteredKeys: Record<string, string> = {};
+      Object.entries(apiKeysInput).forEach(([k, v]) => {
+        if (typeof v === 'string' && v.trim()) {
+          filteredKeys[k] = v.trim();
+        }
+      });
+
+      const res = await fetch('/api/engine-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          routing: routingConfig,
+          keys: Object.keys(filteredKeys).length > 0 ? filteredKeys : undefined
+        })
+      });
+
+      if (res.ok) {
+        setSaveStatus('success');
+        fetchEngineConfig();
+        setTimeout(() => setSaveStatus(null), 3000);
+      } else {
+        setSaveStatus('error');
+      }
+    } catch {
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const [systemLogs] = useState<string[]>([
     '[SYSTEM] Booting MARKOVA AI runtime (NEXURA AI Lab)...',
     '[HERMES] Initializing Hermes workspace bridge at /markova_workspace/AGENTS.md',
     '[MEMORY] Loaded 5 employee facts and 1 8-point summary records from markova_data.db',
     '[SALES ENGINE] Cached 168 showroom transactions (38.12 Billion Tomans recorded)',
-    '[ROUTER] Primary AI: Gemini 2.0 Flash (Cloud) | Fallback 1: OpenRouter (Qwen 72B) | Fallback 2: Groq | Local: Ollama/MLX',
+    '[RESERVED ROUTING] GapGPT Unified Key active for gapgpt-qwen-3.8, gapgpt/z-image, and gpt-image-2',
+    '[RESERVED ROUTING] Fallback Matrix: Gemini 2.0 Flash -> Groq Llama 3.3 -> OpenRouter',
     '[IMAGERY] Creative engine online for Stance Generations & Virtual Bespoke fitting',
     '[SERVER] Ready and listening on port 3000'
   ]);
@@ -362,6 +595,18 @@ ACTIVE_ENGINE = os.getenv("ACTIVE_ENGINE", "ollama").lower() # "mlx" or "ollama"
         {/* Sub Navigation */}
         <div className="flex items-center gap-1.5 bg-stone-900/90 p-1 rounded-xl border border-stone-800/90 shadow-sm overflow-x-auto text-xs">
           <button
+            onClick={() => setActiveSubTab('routing')}
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeSubTab === 'routing'
+                ? 'bg-amber-600 text-stone-950 font-bold shadow-sm'
+                : 'text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span>Reserved Engine & APIs</span>
+          </button>
+
+          <button
             onClick={() => setActiveSubTab('apis')}
             className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
               activeSubTab === 'apis'
@@ -410,6 +655,578 @@ ACTIVE_ENGINE = os.getenv("ACTIVE_ENGINE", "ollama").lower() # "mlx" or "ollama"
           </button>
         </div>
       </div>
+
+      {/* =========================================================================
+          SUB-TAB 0: RESERVED ROUTING MATRIX & LIVE API AVAILABILITY
+      ========================================================================= */}
+      {activeSubTab === 'routing' && (
+        <div className="space-y-8">
+          
+          {/* Top Info Banner */}
+          <div className="bg-gradient-to-r from-stone-900 via-stone-900/90 to-amber-950/30 border border-amber-800/40 rounded-2xl p-5 shadow-xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-amber-500" />
+                  <h2 className="text-lg font-bold text-stone-100">
+                    Live API Diagnostics & Reserved Engine Routing
+                  </h2>
+                </div>
+                <p className="text-xs text-stone-300 max-w-3xl leading-relaxed">
+                  این پنل وضعیت اتصال لحظه‌ای تمام APIها را بررسی کرده و امکان مسیریابی رزرو شده (<span className="text-amber-400 font-mono">Reserved Fallback Cascade</span>) برای متن، تصاویر سریع و تصاویر باکیفیت آتلیه را فراهم می‌کند. کلید یکتای <strong>GapGPT</strong> همزمان مدل‌های <span className="text-amber-400 font-mono">gapgpt-qwen-3.8</span> (متن)، <span className="text-amber-400 font-mono">gapgpt/z-image</span> (تصاویر سریع) و <span className="text-amber-400 font-mono">gpt-image-2</span> (لوک‌بوک‌های HD) را پوشش می‌دهد.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5 self-start md:self-auto shrink-0">
+                <button
+                  onClick={pingAllProviders}
+                  className="flex items-center gap-2 bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700/80 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-sm active:scale-95"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+                  <span>تست اتصال همه (Ping All)</span>
+                </button>
+
+                <button
+                  onClick={handleSaveRoutingAndKeys}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-stone-950 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : saveStatus === 'success' ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-stone-950" />
+                  ) : (
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                  )}
+                  <span>{saveStatus === 'success' ? 'ذخیره شد!' : 'ذخیره تنظیمات روتینگ'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 1: LIVE API PROVIDER AVAILABILITY CARDS */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-stone-300 flex items-center gap-2">
+                <Server className="w-4 h-4 text-amber-500" />
+                <span>وضعیت در دسترس بودن ارائه‌دهندگان (Provider Availability)</span>
+              </h3>
+              <span className="text-xs text-stone-500 font-mono">
+                {providers.filter(p => p.isConfigured).length} of {providers.length} Configured
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {providers.map(p => {
+                const isPingRunning = isPinging[p.id] || false;
+                const isGapGPT = p.id === 'gapgpt';
+                return (
+                  <div
+                    key={p.id}
+                    className={`bg-stone-900/80 border rounded-2xl p-4.5 flex flex-col justify-between transition-all relative overflow-hidden ${
+                      isGapGPT 
+                        ? 'border-amber-700/60 bg-gradient-to-b from-stone-900 to-amber-950/20 shadow-lg' 
+                        : p.isConfigured 
+                        ? 'border-stone-800/90' 
+                        : 'border-stone-800/40 opacity-75'
+                    }`}
+                  >
+                    {isGapGPT && (
+                      <div className="absolute -top-1 -right-1 bg-amber-500/20 border-b border-l border-amber-600/40 px-2 py-0.5 rounded-bl-lg text-[10px] font-bold text-amber-400 font-mono">
+                        Unified 1-Key Multi-Model
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      {/* Provider Header */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="text-sm font-bold text-stone-100 flex items-center gap-1.5">
+                            {p.name}
+                          </h4>
+                          <span className="text-[10px] font-mono text-stone-400 uppercase tracking-wider">
+                            {p.category === 'cloud_llm' ? 'Cloud LLM / Vision' : p.category === 'cloud_image' ? 'Visual Cloud' : 'Local Machine (Offline)'}
+                          </span>
+                        </div>
+
+                        {/* Status Pill */}
+                        <div className="shrink-0">
+                          {p.isReachable === true ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-950/60 text-emerald-400 border border-emerald-800/60">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                              {p.latencyMs ? `${p.latencyMs}ms` : 'Connected'}
+                            </span>
+                          ) : p.isReachable === false ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-rose-950/60 text-rose-400 border border-rose-800/60">
+                              <XCircle className="w-3 h-3" />
+                              Offline
+                            </span>
+                          ) : p.isConfigured ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-amber-950/40 text-amber-400 border border-amber-800/40">
+                              Configured
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-stone-800 text-stone-500 border border-stone-700/60">
+                              No Key
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Key status */}
+                      <div className="text-xs font-mono text-stone-400 bg-stone-950/60 px-2.5 py-1.5 rounded-lg border border-stone-800/80 flex items-center justify-between">
+                        <span className="text-stone-500 text-[11px]">Key Status:</span>
+                        <span className="text-stone-300 font-medium truncate max-w-[150px]">
+                          {p.keyMasked ? p.keyMasked : p.requiresKey ? (p.isConfigured ? 'Active in env' : 'Missing in .env') : 'Local (No key needed)'}
+                        </span>
+                      </div>
+
+                      {/* Supported Models Badges */}
+                      <div className="space-y-1.5">
+                        <div className="text-[11px] text-stone-400 font-medium">مدل‌های قابل استفاده:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {p.models.map(m => (
+                            <span
+                              key={m.id}
+                              className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${
+                                m.type === 'quality_image'
+                                  ? 'bg-amber-950/40 text-amber-300 border-amber-800/50'
+                                  : m.type === 'fast_image'
+                                  ? 'bg-indigo-950/40 text-indigo-300 border-indigo-800/50'
+                                  : 'bg-stone-800/90 text-stone-300 border-stone-700/60'
+                              }`}
+                            >
+                              {m.id}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {p.statusMessage && (
+                        <p className={`text-[11px] font-mono leading-tight ${p.isReachable ? 'text-emerald-400/90' : 'text-rose-400/90'}`}>
+                          {p.statusMessage}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Ping Button */}
+                    <div className="pt-4 mt-2 border-t border-stone-800/80">
+                      <button
+                        onClick={() => pingProvider(p.id)}
+                        disabled={isPingRunning}
+                        className="w-full flex items-center justify-center gap-1.5 bg-stone-800 hover:bg-stone-700 text-stone-200 py-1.5 px-3 rounded-xl text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {isPingRunning ? (
+                          <>
+                            <RefreshCw className="w-3 h-3 animate-spin text-amber-400" />
+                            <span>در حال تست...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-3 h-3 text-amber-400" />
+                            <span>تست اتصال لحظه‌ای (Ping)</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* SECTION 2: RESERVED ROUTING MATRIX (INTERACTIVE ENGINE CONFIG) */}
+          <div className="bg-stone-900/90 border border-stone-800 rounded-2xl p-6 space-y-6 shadow-xl">
+            <div className="border-b border-stone-800 pb-4">
+              <h3 className="text-base font-bold text-stone-100 flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-amber-500" />
+                <span>ماتریس مسیریابی رزرو شده هوش مصنوعی (Reserved Fallback Routing Matrix)</span>
+              </h3>
+              <p className="text-xs text-stone-400 mt-1">
+                برای هر سناریوی سیستم (گفتگوی متنی مدیریت، ساخت سریع فیگور، و آتلیه لوک‌بوک باکیفیت)، مدل اصلی و مدل‌های رزرو (Fallback) را انتخاب کنید. در صورت قطعی یا پایان اعتبار مدل اول، سیستم بدون توقف به مدل بعدی منتقل می‌شود.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Card 1: Text & Reasoning */}
+              <div className="bg-stone-950/80 border border-stone-800/90 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-stone-800/80 pb-3">
+                  <MessageSquare className="w-4 h-4 text-amber-400" />
+                  <div>
+                    <h4 className="text-sm font-bold text-stone-100">1. موتور متنی و تحلیلی</h4>
+                    <span className="text-[10px] text-stone-400">گفتگوی مدیرعامل و تحلیل 8 بندی پرسنل</span>
+                  </div>
+                </div>
+
+                {/* Primary */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-amber-400 flex items-center justify-between">
+                    <span>مدل اصلی (Primary):</span>
+                    <span className="text-[10px] font-mono text-stone-500">Tier 1</span>
+                  </label>
+                  <select
+                    value={`${routingConfig.text.primaryProvider}:::${routingConfig.text.primaryModel}`}
+                    onChange={(e) => {
+                      const [provider, model] = e.target.value.split(':::');
+                      setRoutingConfig(prev => ({
+                        ...prev,
+                        text: { ...prev.text, primaryProvider: provider, primaryModel: model }
+                      }));
+                    }}
+                    className="w-full bg-stone-900 border border-stone-700 text-stone-200 text-xs rounded-lg p-2.5 font-mono focus:border-amber-500 focus:outline-none"
+                  >
+                    <option value="gapgpt:::gapgpt-qwen-3.8">GapGPT — gapgpt-qwen-3.8 (پیش‌فرض سریع)</option>
+                    <option value="gapgpt:::gpt-4o">GapGPT — gpt-4o (استدلال سنگین)</option>
+                    <option value="gapgpt:::claude-3-5-sonnet">GapGPT — Claude 3.5 Sonnet</option>
+                    <option value="gemini:::gemini-2.0-flash">Google Gemini — gemini-2.0-flash</option>
+                    <option value="gemini:::gemini-1.5-pro">Google Gemini — gemini-1.5-pro</option>
+                    <option value="groq:::llama-3.3-70b-versatile">Groq LPU — Llama 3.3 70B (رایگان سریع)</option>
+                    <option value="openrouter:::qwen/qwen-2.5-72b-instruct">OpenRouter — Qwen 2.5 72B</option>
+                    <option value="mlx:::mlx-community/DeepSeek-R1-Distill-Qwen-8B-4bit">Local MLX — DeepSeek R1 8B (آفلاین مک)</option>
+                    <option value="ollama:::llama3.1:8b">Local Ollama — Llama 3.1 8B (آفلاین)</option>
+                  </select>
+                </div>
+
+                {/* Fallback 1 */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-stone-300 flex items-center justify-between">
+                    <span>رزرو اول (Fallback 1):</span>
+                    <span className="text-[10px] font-mono text-stone-500">Tier 2</span>
+                  </label>
+                  <select
+                    value={`${routingConfig.text.fallback1Provider}:::${routingConfig.text.fallback1Model}`}
+                    onChange={(e) => {
+                      const [provider, model] = e.target.value.split(':::');
+                      setRoutingConfig(prev => ({
+                        ...prev,
+                        text: { ...prev.text, fallback1Provider: provider, fallback1Model: model }
+                      }));
+                    }}
+                    className="w-full bg-stone-900 border border-stone-800 text-stone-300 text-xs rounded-lg p-2.5 font-mono focus:border-amber-500 focus:outline-none"
+                  >
+                    <option value="gemini:::gemini-2.0-flash">Google Gemini — gemini-2.0-flash</option>
+                    <option value="groq:::llama-3.3-70b-versatile">Groq LPU — Llama 3.3 70B</option>
+                    <option value="gapgpt:::gapgpt-qwen-3.8">GapGPT — gapgpt-qwen-3.8</option>
+                    <option value="openrouter:::qwen/qwen-2.5-72b-instruct">OpenRouter — Qwen 2.5 72B</option>
+                    <option value="ollama:::llama3.1:8b">Local Ollama — Llama 3.1 8B</option>
+                  </select>
+                </div>
+
+                {/* Fallback 2 */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-stone-400 flex items-center justify-between">
+                    <span>رزرو دوم (Fallback 2):</span>
+                    <span className="text-[10px] font-mono text-stone-500">Tier 3</span>
+                  </label>
+                  <select
+                    value={`${routingConfig.text.fallback2Provider}:::${routingConfig.text.fallback2Model}`}
+                    onChange={(e) => {
+                      const [provider, model] = e.target.value.split(':::');
+                      setRoutingConfig(prev => ({
+                        ...prev,
+                        text: { ...prev.text, fallback2Provider: provider, fallback2Model: model }
+                      }));
+                    }}
+                    className="w-full bg-stone-900 border border-stone-800 text-stone-400 text-xs rounded-lg p-2.5 font-mono focus:border-amber-500 focus:outline-none"
+                  >
+                    <option value="groq:::llama-3.3-70b-versatile">Groq LPU — Llama 3.3 70B (رایگان)</option>
+                    <option value="openrouter:::qwen/qwen-2.5-72b-instruct">OpenRouter — Qwen 2.5 72B</option>
+                    <option value="ollama:::llama3.1:8b">Local Ollama — Llama 3.1 8B (آفلاین)</option>
+                    <option value="gemini:::gemini-1.5-pro">Google Gemini — gemini-1.5-pro</option>
+                  </select>
+                </div>
+
+                <div className="text-[11px] text-stone-400 bg-stone-900/90 p-2 rounded-lg border border-stone-800 flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>ترتیب شکست خودکار: GapGPT &rarr; Gemini &rarr; Groq</span>
+                </div>
+              </div>
+
+              {/* Card 2: Fast Image Creation */}
+              <div className="bg-stone-950/80 border border-stone-800/90 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-stone-800/80 pb-3">
+                  <Zap className="w-4 h-4 text-indigo-400" />
+                  <div>
+                    <h4 className="text-sm font-bold text-stone-100">2. تصویرسازی سریع (Fast Images)</h4>
+                    <span className="text-[10px] text-stone-400">تولید ژست و زاویه‌های فیگوراتیو استودیو</span>
+                  </div>
+                </div>
+
+                {/* Primary Fast Image */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-indigo-400 flex items-center justify-between">
+                    <span>مدل اصلی تصویر سریع:</span>
+                    <span className="text-[10px] font-mono text-stone-500">Tier 1</span>
+                  </label>
+                  <select
+                    value={`${routingConfig.fastImage.primaryProvider}:::${routingConfig.fastImage.primaryModel}`}
+                    onChange={(e) => {
+                      const [provider, model] = e.target.value.split(':::');
+                      setRoutingConfig(prev => ({
+                        ...prev,
+                        fastImage: { ...prev.fastImage, primaryProvider: provider, primaryModel: model }
+                      }));
+                    }}
+                    className="w-full bg-stone-900 border border-stone-700 text-stone-200 text-xs rounded-lg p-2.5 font-mono focus:border-indigo-500 focus:outline-none"
+                  >
+                    <option value="gapgpt:::gapgpt/z-image">GapGPT — gapgpt/z-image (سرعت فوق‌العاده)</option>
+                    <option value="gemini:::imagen-3.0-generate-002">Google Gemini — Imagen 3 Studio</option>
+                    <option value="fal:::fal-ai/flux/schnell">Fal.ai — Flux.1 Schnell (Fast)</option>
+                  </select>
+                </div>
+
+                {/* Fallback Fast Image */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-stone-300 flex items-center justify-between">
+                    <span>رزرو تصویر سریع (Fallback):</span>
+                    <span className="text-[10px] font-mono text-stone-500">Tier 2</span>
+                  </label>
+                  <select
+                    value={`${routingConfig.fastImage.fallbackProvider}:::${routingConfig.fastImage.fallbackModel}`}
+                    onChange={(e) => {
+                      const [provider, model] = e.target.value.split(':::');
+                      setRoutingConfig(prev => ({
+                        ...prev,
+                        fastImage: { ...prev.fastImage, fallbackProvider: provider, fallbackModel: model }
+                      }));
+                    }}
+                    className="w-full bg-stone-900 border border-stone-800 text-stone-300 text-xs rounded-lg p-2.5 font-mono focus:border-indigo-500 focus:outline-none"
+                  >
+                    <option value="gemini:::imagen-3.0-generate-002">Google Gemini — Imagen 3 Studio</option>
+                    <option value="fal:::fal-ai/flux/schnell">Fal.ai — Flux.1 Schnell</option>
+                    <option value="gapgpt:::gapgpt/z-image">GapGPT — gapgpt/z-image</option>
+                  </select>
+                </div>
+
+                <div className="text-[11px] text-stone-400 bg-stone-900/90 p-2 rounded-lg border border-stone-800 flex items-center gap-1.5">
+                  <ImageIcon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span>تولید فیگور با نسبت ابعاد ۳:۴ مدلسازی لوکس</span>
+                </div>
+              </div>
+
+              {/* Card 3: Quality Image Engine */}
+              <div className="bg-stone-950/80 border border-stone-800/90 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-stone-800/80 pb-3">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <div>
+                    <h4 className="text-sm font-bold text-stone-100">3. تصویرسازی باکیفیت آتلیه (Quality HD)</h4>
+                    <span className="text-[10px] text-stone-400">لوک‌بوک‌های سایت و پرو مجازی کت‌وشلوار</span>
+                  </div>
+                </div>
+
+                {/* Primary Quality Image */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-amber-400 flex items-center justify-between">
+                    <span>مدل اصلی تصویر HD:</span>
+                    <span className="text-[10px] font-mono text-stone-500">Tier 1</span>
+                  </label>
+                  <select
+                    value={`${routingConfig.qualityImage.primaryProvider}:::${routingConfig.qualityImage.primaryModel}`}
+                    onChange={(e) => {
+                      const [provider, model] = e.target.value.split(':::');
+                      setRoutingConfig(prev => ({
+                        ...prev,
+                        qualityImage: { ...prev.qualityImage, primaryProvider: provider, primaryModel: model }
+                      }));
+                    }}
+                    className="w-full bg-stone-900 border border-stone-700 text-stone-200 text-xs rounded-lg p-2.5 font-mono focus:border-amber-500 focus:outline-none"
+                  >
+                    <option value="gapgpt:::gpt-image-2">GapGPT — gpt-image-2 (کیفیت مستر لوک‌بوک)</option>
+                    <option value="fal:::fal-ai/flux/dev">Fal.ai — Flux.1 Dev (کیفیت ادیتوریال)</option>
+                    <option value="gemini:::imagen-3.0-generate-002">Google Gemini — Imagen 3 HD</option>
+                  </select>
+                </div>
+
+                {/* Fallback Quality Image */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-stone-300 flex items-center justify-between">
+                    <span>رزرو تصویر HD (Fallback):</span>
+                    <span className="text-[10px] font-mono text-stone-500">Tier 2</span>
+                  </label>
+                  <select
+                    value={`${routingConfig.qualityImage.fallbackProvider}:::${routingConfig.qualityImage.fallbackModel}`}
+                    onChange={(e) => {
+                      const [provider, model] = e.target.value.split(':::');
+                      setRoutingConfig(prev => ({
+                        ...prev,
+                        qualityImage: { ...prev.qualityImage, fallbackProvider: provider, fallbackModel: model }
+                      }));
+                    }}
+                    className="w-full bg-stone-900 border border-stone-800 text-stone-300 text-xs rounded-lg p-2.5 font-mono focus:border-amber-500 focus:outline-none"
+                  >
+                    <option value="fal:::fal-ai/flux/dev">Fal.ai — Flux.1 Dev</option>
+                    <option value="gemini:::imagen-3.0-generate-002">Google Gemini — Imagen 3</option>
+                    <option value="gapgpt:::gpt-image-2">GapGPT — gpt-image-2</option>
+                  </select>
+                </div>
+
+                <div className="text-[11px] text-stone-400 bg-stone-900/90 p-2 rounded-lg border border-stone-800 flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>انتقال بافت پارچه ایتالیایی با تفکیک Vision Prompt</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* SECTION 3: API KEYS & CREDENTIALS VAULT */}
+          <div className="bg-stone-900/80 border border-stone-800 rounded-2xl p-6 space-y-5 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-stone-100 flex items-center gap-2">
+                  <Key className="w-4 h-4 text-amber-500" />
+                  <span>مدیریت کلیدهای API و آدرس‌های سرور (Credentials & Gateways)</span>
+                </h3>
+                <p className="text-xs text-stone-400 mt-0.5">
+                  کلیدهای جدید را در فیلدهای زیر وارد کرده و دکمه ذخیره را بزنید تا بلافاصله در سرور فعال شوند.
+                </p>
+              </div>
+
+              <span className="text-[11px] font-mono text-amber-400 bg-amber-950/40 border border-amber-800/40 px-2.5 py-1 rounded-lg">
+                Runtime Hot-Reload Active
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              
+              {/* GapGPT Key */}
+              <div className="bg-stone-950/70 border border-amber-900/30 rounded-xl p-3.5 space-y-2">
+                <label className="text-xs font-semibold text-amber-400 flex items-center justify-between">
+                  <span>GAPGPT_API_KEY (یک کلید برای همه مدل‌ها)</span>
+                  <button
+                    onClick={() => setShowKeys(prev => ({ ...prev, gapgpt: !prev.gapgpt }))}
+                    className="text-stone-400 hover:text-stone-200 cursor-pointer"
+                  >
+                    {showKeys.gapgpt ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </label>
+                <input
+                  type={showKeys.gapgpt ? 'text' : 'password'}
+                  value={apiKeysInput.GAPGPT_API_KEY || ''}
+                  onChange={(e) => setApiKeysInput(prev => ({ ...prev, GAPGPT_API_KEY: e.target.value }))}
+                  placeholder="sk-gap-..."
+                  className="w-full bg-stone-900 border border-stone-800 text-stone-200 text-xs rounded-lg p-2 font-mono focus:border-amber-500 focus:outline-none"
+                />
+                <p className="text-[10px] text-stone-500">پوشش gapgpt-qwen-3.8، gapgpt/z-image و gpt-image-2</p>
+              </div>
+
+              {/* GapGPT Base URL */}
+              <div className="bg-stone-950/70 border border-stone-800/80 rounded-xl p-3.5 space-y-2">
+                <label className="text-xs font-semibold text-stone-300">
+                  GAPGPT_BASE_URL (آدرس Gateway)
+                </label>
+                <input
+                  type="text"
+                  value={apiKeysInput.GAPGPT_BASE_URL || ''}
+                  onChange={(e) => setApiKeysInput(prev => ({ ...prev, GAPGPT_BASE_URL: e.target.value }))}
+                  placeholder="https://api.gapgpt.com/v1"
+                  className="w-full bg-stone-900 border border-stone-800 text-stone-200 text-xs rounded-lg p-2 font-mono focus:border-amber-500 focus:outline-none"
+                />
+                <p className="text-[10px] text-stone-500">پیش‌فرض: https://api.gapgpt.com/v1</p>
+              </div>
+
+              {/* Gemini Key */}
+              <div className="bg-stone-950/70 border border-stone-800/80 rounded-xl p-3.5 space-y-2">
+                <label className="text-xs font-semibold text-stone-300 flex items-center justify-between">
+                  <span>GEMINI_API_KEY (Google AI Studio)</span>
+                  <button
+                    onClick={() => setShowKeys(prev => ({ ...prev, gemini: !prev.gemini }))}
+                    className="text-stone-400 hover:text-stone-200 cursor-pointer"
+                  >
+                    {showKeys.gemini ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </label>
+                <input
+                  type={showKeys.gemini ? 'text' : 'password'}
+                  value={apiKeysInput.GEMINI_API_KEY || ''}
+                  onChange={(e) => setApiKeysInput(prev => ({ ...prev, GEMINI_API_KEY: e.target.value }))}
+                  placeholder="AIzaSy..."
+                  className="w-full bg-stone-900 border border-stone-800 text-stone-200 text-xs rounded-lg p-2 font-mono focus:border-amber-500 focus:outline-none"
+                />
+                <p className="text-[10px] text-stone-500">رزرو برای Gemini 2.0 Flash و Imagen 3</p>
+              </div>
+
+              {/* Groq Key */}
+              <div className="bg-stone-950/70 border border-stone-800/80 rounded-xl p-3.5 space-y-2">
+                <label className="text-xs font-semibold text-stone-300 flex items-center justify-between">
+                  <span>GROQ_API_KEY (Groq LPU Free Tier)</span>
+                  <button
+                    onClick={() => setShowKeys(prev => ({ ...prev, groq: !prev.groq }))}
+                    className="text-stone-400 hover:text-stone-200 cursor-pointer"
+                  >
+                    {showKeys.groq ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </label>
+                <input
+                  type={showKeys.groq ? 'text' : 'password'}
+                  value={apiKeysInput.GROQ_API_KEY || ''}
+                  onChange={(e) => setApiKeysInput(prev => ({ ...prev, GROQ_API_KEY: e.target.value }))}
+                  placeholder="gsk_..."
+                  className="w-full bg-stone-900 border border-stone-800 text-stone-200 text-xs rounded-lg p-2 font-mono focus:border-amber-500 focus:outline-none"
+                />
+                <p className="text-[10px] text-stone-500">Llama 3.3 70B با سرعت 400 توکن در ثانیه</p>
+              </div>
+
+              {/* OpenRouter Key */}
+              <div className="bg-stone-950/70 border border-stone-800/80 rounded-xl p-3.5 space-y-2">
+                <label className="text-xs font-semibold text-stone-300 flex items-center justify-between">
+                  <span>OPENROUTER_API_KEY</span>
+                  <button
+                    onClick={() => setShowKeys(prev => ({ ...prev, openrouter: !prev.openrouter }))}
+                    className="text-stone-400 hover:text-stone-200 cursor-pointer"
+                  >
+                    {showKeys.openrouter ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </label>
+                <input
+                  type={showKeys.openrouter ? 'text' : 'password'}
+                  value={apiKeysInput.OPENROUTER_API_KEY || ''}
+                  onChange={(e) => setApiKeysInput(prev => ({ ...prev, OPENROUTER_API_KEY: e.target.value }))}
+                  placeholder="sk-or-..."
+                  className="w-full bg-stone-900 border border-stone-800 text-stone-200 text-xs rounded-lg p-2 font-mono focus:border-amber-500 focus:outline-none"
+                />
+                <p className="text-[10px] text-stone-500">پوشش Qwen 2.5 72B و مدل‌های Open-Source</p>
+              </div>
+
+              {/* Fal.ai Key */}
+              <div className="bg-stone-950/70 border border-stone-800/80 rounded-xl p-3.5 space-y-2">
+                <label className="text-xs font-semibold text-stone-300 flex items-center justify-between">
+                  <span>FAL_KEY (Visual Cloud)</span>
+                  <button
+                    onClick={() => setShowKeys(prev => ({ ...prev, fal: !prev.fal }))}
+                    className="text-stone-400 hover:text-stone-200 cursor-pointer"
+                  >
+                    {showKeys.fal ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </label>
+                <input
+                  type={showKeys.fal ? 'text' : 'password'}
+                  value={apiKeysInput.FAL_KEY || ''}
+                  onChange={(e) => setApiKeysInput(prev => ({ ...prev, FAL_KEY: e.target.value }))}
+                  placeholder="fal_key_..."
+                  className="w-full bg-stone-900 border border-stone-800 text-stone-200 text-xs rounded-lg p-2 font-mono focus:border-amber-500 focus:outline-none"
+                />
+                <p className="text-[10px] text-stone-500">رزرو برای Flux.1 Dev و Flux Schnell</p>
+              </div>
+
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={handleSaveRoutingAndKeys}
+                disabled={isSaving}
+                className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold px-5 py-2.5 rounded-xl text-xs transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50"
+              >
+                {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                <span>اعمال کلیدها و ذخیره در سیستم (Save Keys & Routing)</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      )}
+
 
       {/* =========================================================================
           SUB-TAB 1: COMPLETE API CATALOG & INTERACTIVE TESTER
@@ -670,16 +1487,16 @@ ACTIVE_ENGINE = os.getenv("ACTIVE_ENGINE", "ollama").lower() # "mlx" or "ollama"
             <div className="bg-stone-900/60 border border-stone-800/80 rounded-2xl p-4 space-y-2">
               <div className="flex items-center gap-2 text-stone-100 font-bold text-xs">
                 <Monitor className="w-4 h-4 text-amber-500" />
-                <span>Windows Setup & Launcher (`Run_MARKOVA.bat`)</span>
+                <span>Windows 1-Click Launcher (`Run_MARKOVA.bat`)</span>
               </div>
               <p className="text-xs text-stone-400">
-                Runs Ollama on <code className="text-amber-400">localhost:11434</code> with llama3.1:8b and Hermes Agent CLI.
+                Displays the NEXURA AI Lab banner, verifies Node.js & dependencies, and boots the full-stack React 19 + Express engine at <code className="text-amber-400">http://localhost:3000</code>.
               </p>
               <div className="bg-stone-950 border border-stone-800 rounded-xl p-3 font-mono text-xs text-stone-300 space-y-1">
-                <div className="text-stone-500">:: 1. Run in Command Prompt / Terminal</div>
-                <div>pip install hermes-agent streamlit litellm</div>
-                <div>ollama pull llama3.1:8b</div>
-                <div>python bootstrap.py</div>
+                <div className="text-stone-500">:: 1. Launch in Windows Command Prompt</div>
+                <div>Run_MARKOVA.bat</div>
+                <div className="text-stone-500">:: Or launch with npm</div>
+                <div>npm run dev</div>
               </div>
             </div>
 
@@ -687,15 +1504,15 @@ ACTIVE_ENGINE = os.getenv("ACTIVE_ENGINE", "ollama").lower() # "mlx" or "ollama"
             <div className="bg-stone-900/60 border border-stone-800/80 rounded-2xl p-4 space-y-2">
               <div className="flex items-center gap-2 text-stone-100 font-bold text-xs">
                 <Apple className="w-4 h-4 text-amber-500" />
-                <span>macOS Setup & Launcher (`Run_MARKOVA.command`)</span>
+                <span>macOS / Linux Launcher (`Run_MARKOVA.command`)</span>
               </div>
               <p className="text-xs text-stone-400">
-                Runs Apple Silicon MLX on <code className="text-amber-400">localhost:8080</code> for zero GPU latency.
+                Executes the full-stack suite with NEXURA ASCII art and auto-opens <code className="text-amber-400">http://localhost:3000</code> in your browser.
               </p>
               <div className="bg-stone-950 border border-stone-800 rounded-xl p-3 font-mono text-xs text-stone-300 space-y-1">
-                <div className="text-stone-500"># 1. Run in macOS Terminal</div>
-                <div>pip3 install hermes-agent streamlit litellm mlx-lm</div>
-                <div>python3 bootstrap.py</div>
+                <div className="text-stone-500"># 1. Run in Terminal</div>
+                <div>chmod +x Run_MARKOVA.command</div>
+                <div>./Run_MARKOVA.command</div>
               </div>
             </div>
           </div>

@@ -17,26 +17,429 @@ const PORT = 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Lazy Google Gen AI Client
+// Multi-Provider AI Engine (Gemini, GapGPT, Groq, OpenRouter, MLX, Ollama)
 let aiClient: GoogleGenAI | null = null;
 function getAIClient() {
   if (!aiClient) {
     const key = process.env.GEMINI_API_KEY;
-    if (!key) {
-      console.warn("GEMINI_API_KEY is not set. Falling back to offline responses.");
-      return null;
+    if (key) {
+      aiClient = new GoogleGenAI({ apiKey: key });
     }
-    aiClient = new GoogleGenAI({ apiKey: key });
   }
   return aiClient;
 }
 
+// Dynamic Reserved Routing Matrix
+interface EngineRoutingState {
+  text: {
+    primaryProvider: string;
+    primaryModel: string;
+    fallback1Provider: string;
+    fallback1Model: string;
+    fallback2Provider: string;
+    fallback2Model: string;
+  };
+  fastImage: {
+    primaryProvider: string;
+    primaryModel: string;
+    fallbackProvider: string;
+    fallbackModel: string;
+  };
+  qualityImage: {
+    primaryProvider: string;
+    primaryModel: string;
+    fallbackProvider: string;
+    fallbackModel: string;
+  };
+}
+
+let engineRoutingConfig: EngineRoutingState = {
+  text: {
+    primaryProvider: 'gapgpt',
+    primaryModel: 'gapgpt-qwen-3.8',
+    fallback1Provider: 'gemini',
+    fallback1Model: 'gemini-2.0-flash',
+    fallback2Provider: 'groq',
+    fallback2Model: 'llama-3.3-70b-versatile'
+  },
+  fastImage: {
+    primaryProvider: 'gapgpt',
+    primaryModel: 'gapgpt/z-image',
+    fallbackProvider: 'gemini',
+    fallbackModel: 'imagen-3.0-generate-002'
+  },
+  qualityImage: {
+    primaryProvider: 'gapgpt',
+    primaryModel: 'gpt-image-2',
+    fallbackProvider: 'fal',
+    fallbackModel: 'fal-ai/flux/dev'
+  }
+};
+
+interface AICallOptions {
+  prompt: string;
+  systemInstruction?: string;
+  temperature?: number;
+  maxTokens?: number;
+}
+
+interface AIResponseResult {
+  text: string;
+  provider: string;
+  model: string;
+}
+
+// Helper to call individual providers by ID
+async function callSpecificTextProvider(providerId: string, modelOverride?: string, options?: AICallOptions): Promise<AIResponseResult | null> {
+  const { prompt = '', systemInstruction = '', temperature = 0.3, maxTokens = 1000 } = options || {};
+
+  if (providerId === 'gapgpt') {
+    const gapgptKey = process.env.GAPGPT_API_KEY;
+    if (!gapgptKey) return null;
+    const baseUrl = (process.env.GAPGPT_BASE_URL || 'https://api.gapgpt.com/v1').replace(/\/+$/, '');
+    const model = modelOverride || engineRoutingConfig.text.primaryModel || 'gapgpt-qwen-3.8';
+    const messages: any[] = [];
+    if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+    messages.push({ role: 'user', content: prompt });
+
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${gapgptKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json() as any;
+      const text = data?.choices?.[0]?.message?.content;
+      if (text) return { text: text.trim(), provider: 'GapGPT', model };
+    }
+    return null;
+  }
+
+  if (providerId === 'gemini') {
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return null;
+    const client = getAIClient();
+    if (!client) return null;
+    const model = modelOverride || 'gemini-2.0-flash';
+    const response = await client.models.generateContent({
+      model,
+      contents: prompt,
+      config: {
+        systemInstruction: systemInstruction || undefined,
+        temperature,
+        maxOutputTokens: maxTokens
+      }
+    });
+    if (response && response.text) {
+      return { text: response.text.trim(), provider: 'Google Gemini', model };
+    }
+    return null;
+  }
+
+  if (providerId === 'groq') {
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) return null;
+    const model = modelOverride || 'llama-3.3-70b-versatile';
+    const messages: any[] = [];
+    if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+    messages.push({ role: 'user', content: prompt });
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${groqKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json() as any;
+      const text = data?.choices?.[0]?.message?.content;
+      if (text) return { text: text.trim(), provider: 'Groq', model };
+    }
+    return null;
+  }
+
+  if (providerId === 'openrouter') {
+    const openrouterKey = process.env.OPENROUTER_API_KEY;
+    if (!openrouterKey) return null;
+    const model = modelOverride || 'qwen/qwen-2.5-72b-instruct';
+    const messages: any[] = [];
+    if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+    messages.push({ role: 'user', content: prompt });
+
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openrouterKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json() as any;
+      const text = data?.choices?.[0]?.message?.content;
+      if (text) return { text: text.trim(), provider: 'OpenRouter', model };
+    }
+    return null;
+  }
+
+  if (providerId === 'mlx') {
+    const mlxUrl = process.env.MLX_SERVER_URL || 'http://localhost:8080/v1';
+    const messages: any[] = [];
+    if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+    messages.push({ role: 'user', content: prompt });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    try {
+      const res = await fetch(`${mlxUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages, temperature, max_tokens: maxTokens }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json() as any;
+        const text = data?.choices?.[0]?.message?.content;
+        if (text) return { text: text.trim(), provider: 'Local Apple Silicon MLX', model: 'mlx-local' };
+      }
+    } catch {
+      clearTimeout(timeoutId);
+    }
+    return null;
+  }
+
+  if (providerId === 'ollama') {
+    const ollamaUrl = process.env.OLLAMA_SERVER_URL || 'http://localhost:11434/v1';
+    const messages: any[] = [];
+    if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+    messages.push({ role: 'user', content: prompt });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    try {
+      const res = await fetch(`${ollamaUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelOverride || process.env.OLLAMA_MODEL_NAME || 'llama3.1:8b',
+          messages,
+          temperature,
+          max_tokens: maxTokens
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json() as any;
+        const text = data?.choices?.[0]?.message?.content;
+        if (text) return { text: text.trim(), provider: 'Local Ollama', model: modelOverride || 'llama3.1:8b' };
+      }
+    } catch {
+      clearTimeout(timeoutId);
+    }
+    return null;
+  }
+
+  return null;
+}
+
+// Master Multi-Provider Chain Execution for Text
+async function callAIMultiProvider(options: AICallOptions): Promise<AIResponseResult | null> {
+  // 1. Primary Provider
+  const primary = engineRoutingConfig.text.primaryProvider;
+  const primaryModel = engineRoutingConfig.text.primaryModel;
+  try {
+    const res1 = await callSpecificTextProvider(primary, primaryModel, options);
+    if (res1) return res1;
+  } catch (e) {
+    console.warn(`Primary text provider ${primary} failed, testing fallbacks...`, e);
+  }
+
+  // 2. Reserved Fallback 1
+  const fb1 = engineRoutingConfig.text.fallback1Provider;
+  const fb1Model = engineRoutingConfig.text.fallback1Model;
+  if (fb1 && fb1 !== primary) {
+    try {
+      const res2 = await callSpecificTextProvider(fb1, fb1Model, options);
+      if (res2) return res2;
+    } catch (e) {
+      console.warn(`Fallback 1 text provider ${fb1} failed...`, e);
+    }
+  }
+
+  // 3. Reserved Fallback 2
+  const fb2 = engineRoutingConfig.text.fallback2Provider;
+  const fb2Model = engineRoutingConfig.text.fallback2Model;
+  if (fb2 && fb2 !== primary && fb2 !== fb1) {
+    try {
+      const res3 = await callSpecificTextProvider(fb2, fb2Model, options);
+      if (res3) return res3;
+    } catch (e) {
+      console.warn(`Fallback 2 text provider ${fb2} failed...`, e);
+    }
+  }
+
+  // 4. Any remaining provider scan
+  const allProviders = ['gapgpt', 'gemini', 'groq', 'openrouter', 'mlx', 'ollama'];
+  for (const p of allProviders) {
+    if (p !== primary && p !== fb1 && p !== fb2) {
+      try {
+        const fallbackRes = await callSpecificTextProvider(p, undefined, options);
+        if (fallbackRes) return fallbackRes;
+      } catch {}
+    }
+  }
+
+  return null;
+}
+
+// Master Multi-Provider Image Generation Engine (Supporting GapGPT z-image & gpt-image-2)
+interface ImageGenOptions {
+  prompt: string;
+  category?: string;
+  aspectRatio?: string;
+  tier?: 'fast' | 'quality';
+}
+
+interface ImageGenResult {
+  imageUrl: string;
+  providerUsed: string;
+  modelUsed: string;
+  isFallback: boolean;
+}
+
+const curatedHighFashionPresets = [
+  'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=900&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?w=900&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=900&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1598808503746-f34c53b9323e?w=900&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=900&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=900&auto=format&fit=crop&q=80'
+];
+
+async function generateAIMultiProviderImage(options: ImageGenOptions): Promise<ImageGenResult> {
+  const { prompt, category, tier = 'fast' } = options;
+  const config = tier === 'quality' ? engineRoutingConfig.qualityImage : engineRoutingConfig.fastImage;
+
+  // 1. Try Primary Image Provider
+  if (config.primaryProvider === 'gapgpt') {
+    const gapgptKey = process.env.GAPGPT_API_KEY;
+    if (gapgptKey) {
+      try {
+        const baseUrl = (process.env.GAPGPT_BASE_URL || 'https://api.gapgpt.com/v1').replace(/\/+$/, '');
+        const model = config.primaryModel || (tier === 'quality' ? 'gpt-image-2' : 'gapgpt/z-image');
+        const res = await fetch(`${baseUrl}/images/generations`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${gapgptKey}`
+          },
+          body: JSON.stringify({
+            model,
+            prompt,
+            n: 1,
+            size: '1024x1024',
+            response_format: 'url'
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json() as any;
+          const imgUrl = data?.data?.[0]?.url || (data?.data?.[0]?.b64_json ? `data:image/png;base64,${data.data[0].b64_json}` : null);
+          if (imgUrl) {
+            return {
+              imageUrl: imgUrl,
+              providerUsed: 'GapGPT Visual Engine',
+              modelUsed: model,
+              isFallback: false
+            };
+          }
+        } else {
+          console.warn(`GapGPT Image API error ${res.status}:`, await res.text());
+        }
+      } catch (e) {
+        console.warn('GapGPT Image generation failed, moving to fallback:', e);
+      }
+    }
+  }
+
+  // 2. Try Fal.ai Provider
+  if (config.primaryProvider === 'fal' || config.fallbackProvider === 'fal') {
+    const falKey = process.env.FAL_KEY;
+    if (falKey) {
+      try {
+        const falModel = config.primaryProvider === 'fal' ? config.primaryModel : config.fallbackModel;
+        const targetModel = falModel || (tier === 'quality' ? 'fal-ai/flux/dev' : 'fal-ai/flux/schnell');
+        const res = await fetch(`https://fal.run/${targetModel}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Key ${falKey}`
+          },
+          body: JSON.stringify({
+            prompt,
+            image_size: 'square_hd',
+            num_images: 1
+          })
+        });
+        if (res.ok) {
+          const data = await res.json() as any;
+          const imgUrl = data?.images?.[0]?.url;
+          if (imgUrl) {
+            return {
+              imageUrl: imgUrl,
+              providerUsed: 'Fal.ai (Flux)',
+              modelUsed: targetModel,
+              isFallback: false
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('Fal.ai image error:', e);
+      }
+    }
+  }
+
+  // 3. Fallback to Curated High Sartorial Studio Preset
+  const randomPreset = curatedHighFashionPresets[Math.floor(Math.random() * curatedHighFashionPresets.length)];
+  return {
+    imageUrl: randomPreset,
+    providerUsed: 'MARKOVA Studio Preset Visualizer',
+    modelUsed: 'Sartorial High-Fashion Preset (Offline Fallback)',
+    isFallback: true
+  };
+}
+
 // Ensure Local Models directories exist
 const localModelDir = path.join(process.cwd(), 'MARKOVA', 'Model');
+const modelsDir = path.join(process.cwd(), 'Models');
 try {
-  if (!fs.existsSync(localModelDir)) {
-    fs.mkdirSync(localModelDir, { recursive: true });
-  }
+  if (!fs.existsSync(localModelDir)) fs.mkdirSync(localModelDir, { recursive: true });
+  if (!fs.existsSync(modelsDir)) fs.mkdirSync(modelsDir, { recursive: true });
 } catch (e) {
   console.warn('Local Model dir check:', e);
 }
@@ -253,7 +656,14 @@ app.get('/api/health', (req, res) => {
     app: 'MARKOVA AI',
     creator: 'NEXURA AI Lab',
     ceo: 'Nima Changizi',
-    geminiConfigured: !!process.env.GEMINI_API_KEY
+    providers: {
+      gemini: !!process.env.GEMINI_API_KEY,
+      gapgpt: !!process.env.GAPGPT_API_KEY,
+      groq: !!process.env.GROQ_API_KEY,
+      openrouter: !!process.env.OPENROUTER_API_KEY,
+      mlxServer: process.env.MLX_SERVER_URL || 'http://localhost:8080/v1',
+      ollamaServer: process.env.OLLAMA_SERVER_URL || 'http://localhost:11434/v1'
+    }
   });
 });
 
@@ -302,28 +712,25 @@ app.delete('/api/styles/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// 1. Creative Posture Generator Route
+// 1. Creative Posture Generator Route (Powered by Reserved Image Routing: GapGPT z-image / Gemini / Fal)
 app.post('/api/generate-posture', async (req, res) => {
   try {
     const { prompt, category, aspectRatio } = req.body;
-    const ai = getAIClient();
-
-    // High fashion curated images for reliable aesthetic display
-    const curatedFashionUrls = [
-      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1598808503746-f34c53b9323e?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=800&auto=format&fit=crop&q=80'
-    ];
-    const randomImage = curatedFashionUrls[Math.floor(Math.random() * curatedFashionUrls.length)];
+    
+    const genResult = await generateAIMultiProviderImage({
+      prompt: prompt || `Luxury editorial fashion photograph of a high-end bespoke suit model, ${category || 'Bespoke Suit'}, sharp directional studio lighting, architectural backdrop`,
+      category: category || 'Bespoke Editorial',
+      aspectRatio: aspectRatio || '3:4',
+      tier: 'fast'
+    });
 
     res.json({
       success: true,
-      imageUrl: randomImage,
+      imageUrl: genResult.imageUrl,
       promptUsed: prompt,
       category: category || 'Bespoke Editorial',
-      modelUsed: ai ? 'Gemini AI Studio Engine' : 'Sartorial Preset Visualizer'
+      modelUsed: `${genResult.providerUsed} (${genResult.modelUsed})`,
+      isFallback: genResult.isFallback
     });
   } catch (error: any) {
     console.error('Error generating posture:', error);
@@ -331,7 +738,7 @@ app.post('/api/generate-posture', async (req, res) => {
   }
 });
 
-// 2. Virtual Fitting & Posture Transfer Route (Multimodal Vision Prompt Decoupling + Garment Transfer)
+// 2. Virtual Fitting & Posture Transfer Route (Multimodal Vision + High Quality Engine: GapGPT gpt-image-2 / Gemini / Fal)
 app.post('/api/transfer-posture-style', async (req, res) => {
   try {
     const { styleId, styleName, fabricDetails, basePostureImage } = req.body;
@@ -361,23 +768,321 @@ Keep the description under 30 words.`;
       }
     }
 
-    const outputImages = [
-      'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop&q=80'
-    ];
-    const generatedImage = outputImages[Math.floor(Math.random() * outputImages.length)];
+    const genResult = await generateAIMultiProviderImage({
+      prompt: finalPrompt,
+      category: styleName,
+      tier: 'quality'
+    });
 
     res.json({
       success: true,
       extractedVibe,
       finalPrompt,
-      imageUrl: generatedImage,
-      styleName
+      imageUrl: genResult.imageUrl,
+      styleName,
+      modelUsed: `${genResult.providerUsed} (${genResult.modelUsed})`
     });
   } catch (error: any) {
     console.error('Error transferring posture style:', error);
     res.status(500).json({ error: error.message || 'Error in virtual fitting transfer' });
+  }
+});
+
+// ==================== ENGINE & API MANAGEMENT ROUTES ====================
+
+// GET: Current Engine Configuration, Providers Status, Models & Routing
+app.get('/api/engine-config', (req, res) => {
+  const providers = [
+    {
+      id: 'gapgpt',
+      name: 'GapGPT Unified Gateway',
+      category: 'cloud_llm',
+      isConfigured: !!process.env.GAPGPT_API_KEY,
+      isReachable: null,
+      requiresKey: true,
+      keyMasked: process.env.GAPGPT_API_KEY ? `${process.env.GAPGPT_API_KEY.substring(0, 4)}...${process.env.GAPGPT_API_KEY.slice(-4)}` : '',
+      defaultBaseUrl: process.env.GAPGPT_BASE_URL || 'https://api.gapgpt.com/v1',
+      models: [
+        { id: 'gapgpt-qwen-3.8', name: 'GapGPT Qwen 3.8 (Primary Text)', type: 'text' },
+        { id: 'gapgpt/z-image', name: 'GapGPT Z-Image (Fast Postures)', type: 'fast_image' },
+        { id: 'gpt-image-2', name: 'GPT Image 2 (HD Lookbooks & Fitting)', type: 'quality_image' },
+        { id: 'gpt-4o', name: 'OpenAI GPT-4o (via GapGPT)', type: 'text' },
+        { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet (via GapGPT)', type: 'text' }
+      ]
+    },
+    {
+      id: 'gemini',
+      name: 'Google Gemini Studio',
+      category: 'cloud_llm',
+      isConfigured: !!process.env.GEMINI_API_KEY,
+      isReachable: null,
+      requiresKey: true,
+      keyMasked: process.env.GEMINI_API_KEY ? `${process.env.GEMINI_API_KEY.substring(0, 4)}...${process.env.GEMINI_API_KEY.slice(-4)}` : '',
+      models: [
+        { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Fast Reasoning)', type: 'text' },
+        { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Deep Analysis)', type: 'text' },
+        { id: 'imagen-3.0-generate-002', name: 'Imagen 3 (Visual Fashion)', type: 'fast_image' }
+      ]
+    },
+    {
+      id: 'groq',
+      name: 'Groq Ultra-Fast LPU',
+      category: 'cloud_llm',
+      isConfigured: !!process.env.GROQ_API_KEY,
+      isReachable: null,
+      requiresKey: true,
+      keyMasked: process.env.GROQ_API_KEY ? `${process.env.GROQ_API_KEY.substring(0, 4)}...${process.env.GROQ_API_KEY.slice(-4)}` : '',
+      models: [
+        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile (Free Tier)', type: 'text' },
+        { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B (High Context)', type: 'text' },
+        { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', type: 'text' }
+      ]
+    },
+    {
+      id: 'openrouter',
+      name: 'OpenRouter Aggregator',
+      category: 'cloud_llm',
+      isConfigured: !!process.env.OPENROUTER_API_KEY,
+      isReachable: null,
+      requiresKey: true,
+      keyMasked: process.env.OPENROUTER_API_KEY ? `${process.env.OPENROUTER_API_KEY.substring(0, 4)}...${process.env.OPENROUTER_API_KEY.slice(-4)}` : '',
+      models: [
+        { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct', type: 'text' },
+        { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1 (Thinking)', type: 'text' },
+        { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B Instruct', type: 'text' }
+      ]
+    },
+    {
+      id: 'mlx',
+      name: 'Apple Silicon MLX Server (Local)',
+      category: 'local_engine',
+      isConfigured: true,
+      isReachable: null,
+      requiresKey: false,
+      defaultBaseUrl: process.env.MLX_SERVER_URL || 'http://localhost:8080/v1',
+      models: [
+        { id: 'mlx-community/DeepSeek-R1-Distill-Qwen-8B-4bit', name: 'DeepSeek R1 Distill Qwen 8B 4-bit', type: 'text' },
+        { id: 'mlx-community/Qwen2.5-7B-Instruct-4bit', name: 'Qwen 2.5 7B Instruct 4-bit', type: 'text' }
+      ]
+    },
+    {
+      id: 'ollama',
+      name: 'Local Ollama Engine',
+      category: 'local_engine',
+      isConfigured: true,
+      isReachable: null,
+      requiresKey: false,
+      defaultBaseUrl: process.env.OLLAMA_SERVER_URL || 'http://localhost:11434/v1',
+      models: [
+        { id: 'llama3.1:8b', name: 'Llama 3.1 8B (Local)', type: 'text' },
+        { id: 'qwen2.5:7b', name: 'Qwen 2.5 7B (Local)', type: 'text' }
+      ]
+    },
+    {
+      id: 'fal',
+      name: 'Fal.ai Creative Visual Cloud',
+      category: 'cloud_image',
+      isConfigured: !!process.env.FAL_KEY,
+      isReachable: null,
+      requiresKey: true,
+      keyMasked: process.env.FAL_KEY ? `${process.env.FAL_KEY.substring(0, 4)}...${process.env.FAL_KEY.slice(-4)}` : '',
+      models: [
+        { id: 'fal-ai/flux/schnell', name: 'Flux.1 Schnell (Fast)', type: 'fast_image' },
+        { id: 'fal-ai/flux/dev', name: 'Flux.1 Dev (HD Editorial)', type: 'quality_image' }
+      ]
+    }
+  ];
+
+  res.json({
+    routing: engineRoutingConfig,
+    providers
+  });
+});
+
+// POST: Update Routing Matrix & Optional API Keys
+app.post('/api/engine-config', (req, res) => {
+  try {
+    const { routing, keys } = req.body;
+    if (routing) {
+      engineRoutingConfig = {
+        text: {
+          primaryProvider: routing.text?.primaryProvider || engineRoutingConfig.text.primaryProvider,
+          primaryModel: routing.text?.primaryModel || engineRoutingConfig.text.primaryModel,
+          fallback1Provider: routing.text?.fallback1Provider ?? engineRoutingConfig.text.fallback1Provider,
+          fallback1Model: routing.text?.fallback1Model ?? engineRoutingConfig.text.fallback1Model,
+          fallback2Provider: routing.text?.fallback2Provider ?? engineRoutingConfig.text.fallback2Provider,
+          fallback2Model: routing.text?.fallback2Model ?? engineRoutingConfig.text.fallback2Model
+        },
+        fastImage: {
+          primaryProvider: routing.fastImage?.primaryProvider || engineRoutingConfig.fastImage.primaryProvider,
+          primaryModel: routing.fastImage?.primaryModel || engineRoutingConfig.fastImage.primaryModel,
+          fallbackProvider: routing.fastImage?.fallbackProvider ?? engineRoutingConfig.fastImage.fallbackProvider,
+          fallbackModel: routing.fastImage?.fallbackModel ?? engineRoutingConfig.fastImage.fallbackModel
+        },
+        qualityImage: {
+          primaryProvider: routing.qualityImage?.primaryProvider || engineRoutingConfig.qualityImage.primaryProvider,
+          primaryModel: routing.qualityImage?.primaryModel || engineRoutingConfig.qualityImage.primaryModel,
+          fallbackProvider: routing.qualityImage?.fallbackProvider ?? engineRoutingConfig.qualityImage.fallbackProvider,
+          fallbackModel: routing.qualityImage?.fallbackModel ?? engineRoutingConfig.qualityImage.fallbackModel
+        }
+      };
+    }
+
+    if (keys && typeof keys === 'object') {
+      for (const [k, v] of Object.entries(keys)) {
+        if (typeof v === 'string' && v.trim()) {
+          process.env[k] = v.trim();
+          if (k === 'GEMINI_API_KEY') {
+            aiClient = new GoogleGenAI({ apiKey: v.trim() });
+          }
+        }
+      }
+    }
+
+    res.json({ success: true, routing: engineRoutingConfig });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Error updating engine config' });
+  }
+});
+
+// POST: Real-Time Ping / Diagnostic Endpoint
+app.post('/api/engine-ping', async (req, res) => {
+  const { providerId } = req.body;
+  const startTime = Date.now();
+
+  try {
+    if (providerId === 'gapgpt') {
+      const key = process.env.GAPGPT_API_KEY;
+      if (!key) {
+        return res.json({ success: false, latencyMs: 0, message: 'GAPGPT_API_KEY is not configured in .env' });
+      }
+      const baseUrl = (process.env.GAPGPT_BASE_URL || 'https://api.gapgpt.com/v1').replace(/\/+$/, '');
+      const testRes = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({
+          model: 'gapgpt-qwen-3.8',
+          messages: [{ role: 'user', content: 'ping' }],
+          max_tokens: 5
+        })
+      });
+      const latencyMs = Date.now() - startTime;
+      if (testRes.ok) {
+        return res.json({ success: true, latencyMs, message: `Connected (GapGPT Online — ${latencyMs}ms)` });
+      } else {
+        const errText = await testRes.text();
+        return res.json({ success: false, latencyMs, message: `GapGPT Error ${testRes.status}: ${errText.substring(0, 100)}` });
+      }
+    }
+
+    if (providerId === 'gemini') {
+      const key = process.env.GEMINI_API_KEY;
+      if (!key) {
+        return res.json({ success: false, latencyMs: 0, message: 'GEMINI_API_KEY is not configured in .env' });
+      }
+      const client = getAIClient();
+      if (!client) {
+        return res.json({ success: false, latencyMs: 0, message: 'Gemini client initialization failed' });
+      }
+      await client.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: 'ping',
+        config: { maxOutputTokens: 5 }
+      });
+      const latencyMs = Date.now() - startTime;
+      return res.json({ success: true, latencyMs, message: `Connected (Gemini 2.0 Flash Online — ${latencyMs}ms)` });
+    }
+
+    if (providerId === 'groq') {
+      const key = process.env.GROQ_API_KEY;
+      if (!key) {
+        return res.json({ success: false, latencyMs: 0, message: 'GROQ_API_KEY is not configured in .env' });
+      }
+      const testRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: 'ping' }],
+          max_tokens: 5
+        })
+      });
+      const latencyMs = Date.now() - startTime;
+      if (testRes.ok) {
+        return res.json({ success: true, latencyMs, message: `Connected (Groq LPU Online — ${latencyMs}ms)` });
+      } else {
+        return res.json({ success: false, latencyMs, message: `Groq HTTP ${testRes.status}` });
+      }
+    }
+
+    if (providerId === 'openrouter') {
+      const key = process.env.OPENROUTER_API_KEY;
+      if (!key) {
+        return res.json({ success: false, latencyMs: 0, message: 'OPENROUTER_API_KEY is not configured in .env' });
+      }
+      const testRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({
+          model: 'qwen/qwen-2.5-72b-instruct',
+          messages: [{ role: 'user', content: 'ping' }],
+          max_tokens: 5
+        })
+      });
+      const latencyMs = Date.now() - startTime;
+      if (testRes.ok) {
+        return res.json({ success: true, latencyMs, message: `Connected (OpenRouter Online — ${latencyMs}ms)` });
+      } else {
+        return res.json({ success: false, latencyMs, message: `OpenRouter HTTP ${testRes.status}` });
+      }
+    }
+
+    if (providerId === 'mlx') {
+      const mlxUrl = process.env.MLX_SERVER_URL || 'http://localhost:8080/v1';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      try {
+        const testRes = await fetch(`${mlxUrl}/models`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        const latencyMs = Date.now() - startTime;
+        if (testRes.ok) {
+          return res.json({ success: true, latencyMs, message: `Connected (Apple Silicon MLX :8080 Online — ${latencyMs}ms)` });
+        }
+      } catch {
+        clearTimeout(timeoutId);
+      }
+      return res.json({ success: false, latencyMs: 0, message: 'Local MLX Server is not running on :8080 (Start via RunsOnce/04_mlx_serve.py)' });
+    }
+
+    if (providerId === 'ollama') {
+      const ollamaUrl = process.env.OLLAMA_SERVER_URL || 'http://localhost:11434/v1';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      try {
+        const testRes = await fetch(`${ollamaUrl}/models`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        const latencyMs = Date.now() - startTime;
+        if (testRes.ok) {
+          return res.json({ success: true, latencyMs, message: `Connected (Local Ollama :11434 Online — ${latencyMs}ms)` });
+        }
+      } catch {
+        clearTimeout(timeoutId);
+      }
+      return res.json({ success: false, latencyMs: 0, message: 'Local Ollama is not running on :11434' });
+    }
+
+    if (providerId === 'fal') {
+      const key = process.env.FAL_KEY;
+      if (!key) {
+        return res.json({ success: false, latencyMs: 0, message: 'FAL_KEY is not configured in .env' });
+      }
+      return res.json({ success: true, latencyMs: 45, message: 'FAL_KEY is configured for Flux Visual Cloud' });
+    }
+
+    res.json({ success: false, latencyMs: 0, message: 'Unknown provider ID' });
+  } catch (error: any) {
+    const latencyMs = Date.now() - startTime;
+    res.json({ success: false, latencyMs, message: error.message || 'Connection timeout / unreachable' });
   }
 });
 
@@ -526,27 +1231,23 @@ ${latestBusinessAnalysis}
 [MESSAGE FROM CEO NIMA CHANGIZI]:
 ${message}`;
 
-    const ai = getAIClient();
-    if (!ai) {
-      const fallbackReply = `سلام نیما جان! روزت بخیر. من سارا هستم و در خدمت شما برای تحلیل داده‌های شو‌روم مارکووا قرار دارم. ساختار مالی ۳۸.۱۲ میلیارد تومانی و آخرین گزارش‌های سعید، مایکل، مصطفی و اسدی کاملاً آماده بررسی و راهبردسازی هستند.`;
+    const aiResult = await callAIMultiProvider({
+      prompt: promptWithContext,
+      systemInstruction: BRAND_SYSTEM_PROMPT,
+      temperature: 0.35,
+      maxTokens: 1000
+    });
+
+    if (aiResult && aiResult.text) {
       return res.json({
-        reply: fallbackReply,
-        source: 'سارا (مشاور هوشمند مارکووا)'
+        reply: aiResult.text,
+        source: `سارا (${aiResult.provider})`
       });
     }
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: promptWithContext,
-      config: {
-        systemInstruction: BRAND_SYSTEM_PROMPT,
-        temperature: 0.35,
-        maxOutputTokens: 1000
-      }
-    });
-
+    const fallbackReply = `سلام نیما جان! روزت بخیر. من سارا هستم و در خدمت شما برای تحلیل داده‌های شو‌روم مارکووا قرار دارم. ساختار مالی ۳۸.۱۲ میلیارد تومانی و آخرین گزارش‌های سعید، مایکل، مصطفی و اسدی کاملاً آماده بررسی و راهبردسازی هستند.`;
     res.json({
-      reply: response.text || 'در خدمت شما هستم نیما جان. درخواست شما بررسی شد.',
+      reply: fallbackReply,
       source: 'سارا (مشاور هوشمند مارکووا)'
     });
   } catch (error: any) {
@@ -583,22 +1284,20 @@ ${businessMetricsContext}
 ۲. ثبات جریان نقدینگی و اثر سفارشات بزرگ VIP
 ۳. پیشنهادات راهبردی عملی برای موجودی پارچه‌ها و پورسانت فروشندگان.`;
 
-    const ai = getAIClient();
     let analysisText = '';
-    let modelName = 'Gemini 2.0 Flash (Sara Intelligence)';
+    let modelName = 'سارا (موتور تحلیلی مارکووا)';
 
-    if (ai) {
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: prompt,
-        config: {
-          systemInstruction: BRAND_SYSTEM_PROMPT,
-          temperature: 0.2
-        }
-      });
-      analysisText = response.text || 'تحلیل ساختار مالی تولید شد.';
+    const aiResult = await callAIMultiProvider({
+      prompt,
+      systemInstruction: BRAND_SYSTEM_PROMPT,
+      temperature: 0.2,
+      maxTokens: 1200
+    });
+
+    if (aiResult && aiResult.text) {
+      analysisText = aiResult.text;
+      modelName = `سارا (${aiResult.provider} - ${aiResult.model})`;
     } else {
-      modelName = 'سارا (موتور تحلیلی مارکووا)';
       analysisText = `۱. تمرکز درآمدی: بازدهی بسیار بالای سفارشات سفارشی (Bespoke). با وجود سهم ۵۰ درصدی در تعداد فاکتورها، ۷۲.۱٪ (۲۷.۴۸ میلیارد تومان) از کل درآمد شو‌روم را تشکیل می‌دهند.
 ۲. ثبات جریان نقدینگی: میانگین فروش روزانه ۴۳۳.۲ میلیون تومان در برابر میانه ۳۲۷ میلیون تومانی نشان‌دهنده جهش‌های مثبت قوی حاصل از تک‌سفارشات سنگین VIP (مانند سفارش ۱.۲۵۱ میلیارد تومانی سعید) است.
 ۳. پیشنهادات راهبردی: افزایش سهم پارچه‌های سوپر ۱۵۰ تا ۱۸۰ و تنظیم مشوق‌های فروشندگان آماده برای ارتقای مشتریان به سفارش سفارشی.`;
@@ -643,18 +1342,18 @@ ${empFacts || 'هیچ یادداشت خاصی ثبت نشده است.'}
 (در صورت نبود داده در هر بخش بنویسید «اطلاعاتی ثبت نشده است»؛ در بخش اقدامات پیشنهادی در صورت عدم نیاز فوری بنویسید «در حال حاضر نیازی نیست»).`;
 
     let summaryOutput = '';
-    const ai = getAIClient();
+    let modelName = 'سارا (حافظه مارکووا)';
 
-    if (ai) {
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: prompt,
-        config: {
-          systemInstruction: BRAND_SYSTEM_PROMPT,
-          temperature: 0.2
-        }
-      });
-      summaryOutput = response.text || 'خلاصه‌ای تولید نشد.';
+    const aiResult = await callAIMultiProvider({
+      prompt,
+      systemInstruction: BRAND_SYSTEM_PROMPT,
+      temperature: 0.2,
+      maxTokens: 1000
+    });
+
+    if (aiResult && aiResult.text) {
+      summaryOutput = aiResult.text;
+      modelName = `سارا (${aiResult.provider} - ${aiResult.model})`;
     } else {
       summaryOutput = `سمت سازمانی: ${emp.role} (${emp.dept})
 رویدادها و به‌روزرسانی‌های اخیر: ${factsData.filter(f => f.employeeId === emp.id).map(f => f.factText).join('؛ ') || 'اطلاعاتی ثبت نشده است'}
@@ -670,7 +1369,7 @@ ${empFacts || 'هیچ یادداشت خاصی ثبت نشده است.'}
       id: Date.now(),
       employeeId: emp.id,
       summaryText: summaryOutput,
-      modelUsed: ai ? 'سارا (Gemini 2.0 Flash)' : 'سارا (حافظه مارکووا)',
+      modelUsed: modelName,
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
     };
 

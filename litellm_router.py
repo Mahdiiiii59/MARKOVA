@@ -13,8 +13,12 @@ import sys
 import subprocess
 from config import (
     GEMINI_API_KEY,
+    GAPGPT_API_KEY,
+    GAPGPT_BASE_URL,
+    GAPGPT_MODEL,
     OPENROUTER_API_KEY,
     GROQ_API_KEY,
+    MLX_SERVER_URL,
     OLLAMA_MODEL_NAME,
     OLLAMA_SERVER_URL,
     SYSTEM_PERSONALITY
@@ -27,6 +31,13 @@ FALLBACK_PROVIDERS = [
         "model": "gemini/gemini-2.0-flash",
         "api_key_env": "GEMINI_API_KEY",
         "key_value": GEMINI_API_KEY,
+    },
+    {
+        "name": f"GapGPT ({GAPGPT_MODEL})",
+        "model": f"openai/{GAPGPT_MODEL}",
+        "api_key_env": "GAPGPT_API_KEY",
+        "key_value": GAPGPT_API_KEY,
+        "api_base": GAPGPT_BASE_URL,
     },
     {
         "name": "Google Gemini 1.5 Flash",
@@ -45,6 +56,13 @@ FALLBACK_PROVIDERS = [
         "model": "groq/llama-3.1-70b-versatile",
         "api_key_env": "GROQ_API_KEY",
         "key_value": GROQ_API_KEY,
+    },
+    {
+        "name": "Local Apple Silicon MLX Server",
+        "model": "openai/mlx-community/DeepSeek-R1-Distill-Qwen-8B-4bit",
+        "api_key_env": None,
+        "key_value": "local",
+        "api_base": MLX_SERVER_URL,
     },
     {
         "name": "Local Ollama Engine",

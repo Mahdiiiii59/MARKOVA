@@ -106,3 +106,51 @@ export interface LogoSettings {
   watermarkEnabled: boolean;
 }
 
+export interface ProviderDiagnostic {
+  id: string;
+  name: string;
+  category: 'cloud_llm' | 'cloud_image' | 'local_engine';
+  isConfigured: boolean;
+  isReachable: boolean | null;
+  latencyMs?: number;
+  message?: string;
+  models: { id: string; name: string; type: 'text' | 'fast_image' | 'quality_image' }[];
+  requiresKey: boolean;
+  keyMasked?: string;
+  defaultBaseUrl?: string;
+}
+
+export interface ReservedEngineRouting {
+  text: {
+    primaryProvider: string;
+    primaryModel: string;
+    fallback1Provider: string;
+    fallback1Model: string;
+    fallback2Provider: string;
+    fallback2Model: string;
+  };
+  fastImage: {
+    primaryProvider: string;
+    primaryModel: string;
+    fallbackProvider: string;
+    fallbackModel: string;
+  };
+  qualityImage: {
+    primaryProvider: string;
+    primaryModel: string;
+    fallbackProvider: string;
+    fallbackModel: string;
+  };
+}
+
+export interface ApiKeysPayload {
+  GAPGPT_API_KEY?: string;
+  GAPGPT_BASE_URL?: string;
+  GEMINI_API_KEY?: string;
+  GROQ_API_KEY?: string;
+  OPENROUTER_API_KEY?: string;
+  FAL_KEY?: string;
+  MLX_SERVER_URL?: string;
+  OLLAMA_SERVER_URL?: string;
+}
+
