@@ -107,6 +107,7 @@ export interface LogoSettings {
 }
 
 export interface ProviderDiagnostic {
+  statusMessage?: string;
   id: string;
   name: string;
   category: 'cloud_llm' | 'cloud_image' | 'local_engine';

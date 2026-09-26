@@ -204,7 +204,7 @@ export const PersonnelIntelligence: React.FC<PersonnelIntelligenceProps> = ({
                       <div className="flex items-center gap-2">
                         <FileText className="w-3.5 h-3.5 text-amber-400" />
                         <span className="text-xs font-semibold text-stone-200">
-                          خلاصه مدیریتی سارا &bull; {sum.createdAt}
+                          خلاصه مدیریتی مارا &bull; {sum.createdAt}
                         </span>
                         {sum.modelUsed && (
                           <span className="text-[10px] text-amber-400/80 bg-amber-950/60 border border-amber-800/30 px-1.5 py-0.5 rounded font-mono">
