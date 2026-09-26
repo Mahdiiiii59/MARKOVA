@@ -669,354 +669,28 @@ app.post('/api/generate-posture', async (req, res) => {
   }
 });
 
-// 2. Virtual Fitting & Posture Transfer Route (Multimodal Vision + High Quality Engine: GapGPT gpt-image-2 / Gemini / Fal)
+// 2. Virtual Fitting & Posture Transfer Route
 app.post('/api/transfer-posture-style', async (req, res) => {
   try {
     const { styleId, styleName, fabricDetails, basePostureImage } = req.body;
-    const ai = getAIClient();
 
     let extractedVibe = 'Confident standing posture at 45-degree angle, sharp directional studio lighting with soft fill, neutral architectural background.';
     let finalPrompt = `Editorial photograph with identical model pose, lighting, and facial angle, transformed to wear MARKOVA's bespoke ${styleName} with ${fabricDetails || 'hand-stitched Super 160s wool'}.`;
 
-    if (ai) {
-      try {
-        const visionPrompt = `You are a world-class luxury fashion director. 
-We have a model posture image. Analyze and describe ONLY the model's physical posture, body stance, camera lens angle, facial gaze, and studio lighting setup.
-CRITICAL: Do NOT mention or describe the original clothes.
-Keep the description under 30 words.`;
-
-        const visionResponse = await ai.models.generateContent({
-          model: 'gemini-2.0-flash',
-          contents: visionPrompt,
-          config: { temperature: 0.2, maxOutputTokens: 120 }
-        });
-        if (visionResponse.text) {
-          extractedVibe = visionResponse.text.trim();
-          finalPrompt = `Editorial fashion photograph of the model in posture [${extractedVibe}], wearing a bespoke MARKOVA ${styleName} (${fabricDetails || 'Super 160s pure wool'}), sharp Milanese lapels, tailored trousers, high sartorial precision.`;
-        }
-      } catch (e) {
-        console.warn('Vision analysis fallback:', e);
-      }
-    }
-
-    const genResult = await generateAIMultiProviderImage({
-      prompt: finalPrompt,
-      category: styleName,
-      tier: 'quality'
-    });
-
+    // AI provider removed, using fallback static image for now.
     res.json({
       success: true,
       extractedVibe,
       finalPrompt,
-      imageUrl: genResult.imageUrl,
+      imageUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=900&auto=format&fit=crop&q=80',
       styleName,
-      modelUsed: `${genResult.providerUsed} (${genResult.modelUsed})`
+      modelUsed: 'MARKOVA Studio Preset Visualizer (Offline Fallback)'
     });
   } catch (error: any) {
     console.error('Error transferring posture style:', error);
     res.status(500).json({ error: error.message || 'Error in virtual fitting transfer' });
   }
 });
-
-// ==================== ENGINE & API MANAGEMENT ROUTES ====================
-
-// GET: Current Engine Configuration, Providers Status, Models & Routing
-app.get('/api/engine-config', (req, res) => {
-  const providers = [
-    {
-      id: 'gapgpt',
-      name: 'GapGPT Unified Gateway',
-      category: 'cloud_llm',
-      isConfigured: !!process.env.GAPGPT_API_KEY,
-      isReachable: null,
-      requiresKey: true,
-      keyMasked: process.env.GAPGPT_API_KEY ? `${process.env.GAPGPT_API_KEY.substring(0, 4)}...${process.env.GAPGPT_API_KEY.slice(-4)}` : '',
-      defaultBaseUrl: process.env.GAPGPT_BASE_URL || 'https://api.gapgpt.com/v1',
-      models: [
-        { id: 'gpt-4o', name: 'OpenAI GPT-4o (Primary Text)', type: 'text' },
-        { id: 'gapgpt/z-image', name: 'GapGPT Z-Image (Fast Postures)', type: 'fast_image' },
-        { id: 'gpt-image-2', name: 'GPT Image 2 (HD Lookbooks & Fitting)', type: 'quality_image' },
-        { id: 'qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct (via GapGPT)', type: 'text' },
-        { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet (via GapGPT)', type: 'text' }
-      ]
-    },
-    {
-      id: 'gemini',
-      name: 'Google Gemini Studio',
-      category: 'cloud_llm',
-      isConfigured: !!process.env.GEMINI_API_KEY,
-      isReachable: null,
-      requiresKey: true,
-      keyMasked: process.env.GEMINI_API_KEY ? `${process.env.GEMINI_API_KEY.substring(0, 4)}...${process.env.GEMINI_API_KEY.slice(-4)}` : '',
-      models: [
-        { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Fast Reasoning)', type: 'text' },
-        { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Deep Analysis)', type: 'text' },
-        { id: 'imagen-3.0-generate-002', name: 'Imagen 3 (Visual Fashion)', type: 'fast_image' }
-      ]
-    },
-    {
-      id: 'groq',
-      name: 'Groq Ultra-Fast LPU',
-      category: 'cloud_llm',
-      isConfigured: !!process.env.GROQ_API_KEY,
-      isReachable: null,
-      requiresKey: true,
-      keyMasked: process.env.GROQ_API_KEY ? `${process.env.GROQ_API_KEY.substring(0, 4)}...${process.env.GROQ_API_KEY.slice(-4)}` : '',
-      models: [
-        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile (Free Tier)', type: 'text' },
-        { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B (High Context)', type: 'text' },
-        { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', type: 'text' }
-      ]
-    },
-    {
-      id: 'openrouter',
-      name: 'OpenRouter Aggregator',
-      category: 'cloud_llm',
-      isConfigured: !!process.env.OPENROUTER_API_KEY,
-      isReachable: null,
-      requiresKey: true,
-      keyMasked: process.env.OPENROUTER_API_KEY ? `${process.env.OPENROUTER_API_KEY.substring(0, 4)}...${process.env.OPENROUTER_API_KEY.slice(-4)}` : '',
-      models: [
-        { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct', type: 'text' },
-        { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1 (Thinking)', type: 'text' },
-        { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B Instruct', type: 'text' }
-      ]
-    },
-    {
-      id: 'mlx',
-      name: 'Apple Silicon MLX Server (Local)',
-      category: 'local_engine',
-      isConfigured: true,
-      isReachable: null,
-      requiresKey: false,
-      defaultBaseUrl: process.env.MLX_SERVER_URL || 'http://localhost:8080/v1',
-      models: [
-        { id: 'mlx-community/DeepSeek-R1-Distill-Qwen-8B-4bit', name: 'DeepSeek R1 Distill Qwen 8B 4-bit', type: 'text' },
-        { id: 'mlx-community/Qwen2.5-7B-Instruct-4bit', name: 'Qwen 2.5 7B Instruct 4-bit', type: 'text' }
-      ]
-    },
-    {
-      id: 'ollama',
-      name: 'Local Ollama Engine',
-      category: 'local_engine',
-      isConfigured: true,
-      isReachable: null,
-      requiresKey: false,
-      defaultBaseUrl: process.env.OLLAMA_SERVER_URL || 'http://localhost:11434/v1',
-      models: [
-        { id: 'llama3.1:8b', name: 'Llama 3.1 8B (Local)', type: 'text' },
-        { id: 'qwen2.5:7b', name: 'Qwen 2.5 7B (Local)', type: 'text' }
-      ]
-    },
-    {
-      id: 'fal',
-      name: 'Fal.ai Creative Visual Cloud',
-      category: 'cloud_image',
-      isConfigured: !!process.env.FAL_KEY,
-      isReachable: null,
-      requiresKey: true,
-      keyMasked: process.env.FAL_KEY ? `${process.env.FAL_KEY.substring(0, 4)}...${process.env.FAL_KEY.slice(-4)}` : '',
-      models: [
-        { id: 'fal-ai/flux/schnell', name: 'Flux.1 Schnell (Fast)', type: 'fast_image' },
-        { id: 'fal-ai/flux/dev', name: 'Flux.1 Dev (HD Editorial)', type: 'quality_image' }
-      ]
-    }
-  ];
-
-  res.json({
-    routing: engineRoutingConfig,
-    providers
-  });
-});
-
-// POST: Update Routing Matrix & Optional API Keys
-app.post('/api/engine-config', (req, res) => {
-  try {
-    const { routing, keys } = req.body;
-    if (routing) {
-      engineRoutingConfig = {
-        text: {
-          primaryProvider: routing.text?.primaryProvider || engineRoutingConfig.text.primaryProvider,
-          primaryModel: routing.text?.primaryModel || engineRoutingConfig.text.primaryModel,
-          fallback1Provider: routing.text?.fallback1Provider ?? engineRoutingConfig.text.fallback1Provider,
-          fallback1Model: routing.text?.fallback1Model ?? engineRoutingConfig.text.fallback1Model,
-          fallback2Provider: routing.text?.fallback2Provider ?? engineRoutingConfig.text.fallback2Provider,
-          fallback2Model: routing.text?.fallback2Model ?? engineRoutingConfig.text.fallback2Model
-        },
-        fastImage: {
-          primaryProvider: routing.fastImage?.primaryProvider || engineRoutingConfig.fastImage.primaryProvider,
-          primaryModel: routing.fastImage?.primaryModel || engineRoutingConfig.fastImage.primaryModel,
-          fallbackProvider: routing.fastImage?.fallbackProvider ?? engineRoutingConfig.fastImage.fallbackProvider,
-          fallbackModel: routing.fastImage?.fallbackModel ?? engineRoutingConfig.fastImage.fallbackModel
-        },
-        qualityImage: {
-          primaryProvider: routing.qualityImage?.primaryProvider || engineRoutingConfig.qualityImage.primaryProvider,
-          primaryModel: routing.qualityImage?.primaryModel || engineRoutingConfig.qualityImage.primaryModel,
-          fallbackProvider: routing.qualityImage?.fallbackProvider ?? engineRoutingConfig.qualityImage.fallbackProvider,
-          fallbackModel: routing.qualityImage?.fallbackModel ?? engineRoutingConfig.qualityImage.fallbackModel
-        }
-      };
-    }
-
-    if (keys && typeof keys === 'object') {
-      for (const [k, v] of Object.entries(keys)) {
-        if (typeof v === 'string' && v.trim()) {
-          process.env[k] = v.trim();
-          if (k === 'GEMINI_API_KEY') {
-            aiClient = new GoogleGenAI({ apiKey: v.trim() });
-          }
-        }
-      }
-    }
-
-    res.json({ success: true, routing: engineRoutingConfig });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Error updating engine config' });
-  }
-});
-
-// POST: Real-Time Ping / Diagnostic Endpoint
-app.post('/api/engine-ping', async (req, res) => {
-  const { providerId } = req.body;
-  const startTime = Date.now();
-
-  try {
-    if (providerId === 'gapgpt') {
-      const key = process.env.GAPGPT_API_KEY;
-      if (!key) {
-        return res.json({ success: false, latencyMs: 0, message: 'GAPGPT_API_KEY is not configured in .env' });
-      }
-      const baseUrl = (process.env.GAPGPT_BASE_URL || 'https://api.gapgpt.com/v1').replace(/\/+$/, '');
-      const testRes = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [{ role: 'user', content: 'ping' }],
-          max_tokens: 5
-        })
-      });
-      const latencyMs = Date.now() - startTime;
-      if (testRes.ok) {
-        return res.json({ success: true, latencyMs, message: `Connected (GapGPT Online — ${latencyMs}ms)` });
-      } else {
-        const errText = await testRes.text();
-        return res.json({ success: false, latencyMs, message: `GapGPT Error ${testRes.status}: ${errText.substring(0, 100)}` });
-      }
-    }
-
-    if (providerId === 'gemini') {
-      const key = process.env.GEMINI_API_KEY;
-      if (!key) {
-        return res.json({ success: false, latencyMs: 0, message: 'GEMINI_API_KEY is not configured in .env' });
-      }
-      const client = getAIClient();
-      if (!client) {
-        return res.json({ success: false, latencyMs: 0, message: 'Gemini client initialization failed' });
-      }
-      await client.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: 'ping',
-        config: { maxOutputTokens: 5 }
-      });
-      const latencyMs = Date.now() - startTime;
-      return res.json({ success: true, latencyMs, message: `Connected (Gemini 2.0 Flash Online — ${latencyMs}ms)` });
-    }
-
-    if (providerId === 'groq') {
-      const key = process.env.GROQ_API_KEY;
-      if (!key) {
-        return res.json({ success: false, latencyMs: 0, message: 'GROQ_API_KEY is not configured in .env' });
-      }
-      const testRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'user', content: 'ping' }],
-          max_tokens: 5
-        })
-      });
-      const latencyMs = Date.now() - startTime;
-      if (testRes.ok) {
-        return res.json({ success: true, latencyMs, message: `Connected (Groq LPU Online — ${latencyMs}ms)` });
-      } else {
-        return res.json({ success: false, latencyMs, message: `Groq HTTP ${testRes.status}` });
-      }
-    }
-
-    if (providerId === 'openrouter') {
-      const key = process.env.OPENROUTER_API_KEY;
-      if (!key) {
-        return res.json({ success: false, latencyMs: 0, message: 'OPENROUTER_API_KEY is not configured in .env' });
-      }
-      const testRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-        body: JSON.stringify({
-          model: 'qwen/qwen-2.5-72b-instruct',
-          messages: [{ role: 'user', content: 'ping' }],
-          max_tokens: 5
-        })
-      });
-      const latencyMs = Date.now() - startTime;
-      if (testRes.ok) {
-        return res.json({ success: true, latencyMs, message: `Connected (OpenRouter Online — ${latencyMs}ms)` });
-      } else {
-        return res.json({ success: false, latencyMs, message: `OpenRouter HTTP ${testRes.status}` });
-      }
-    }
-
-    if (providerId === 'mlx') {
-      const mlxUrl = process.env.MLX_SERVER_URL || 'http://localhost:8080/v1';
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
-      try {
-        const testRes = await fetch(`${mlxUrl}/models`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        const latencyMs = Date.now() - startTime;
-        if (testRes.ok) {
-          return res.json({ success: true, latencyMs, message: `Connected (Apple Silicon MLX :8080 Online — ${latencyMs}ms)` });
-        }
-      } catch {
-        clearTimeout(timeoutId);
-      }
-      return res.json({ success: false, latencyMs: 0, message: 'Local MLX Server is not running on :8080 (Start via RunsOnce/04_mlx_serve.py)' });
-    }
-
-    if (providerId === 'ollama') {
-      const ollamaUrl = process.env.OLLAMA_SERVER_URL || 'http://localhost:11434/v1';
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
-      try {
-        const testRes = await fetch(`${ollamaUrl}/models`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        const latencyMs = Date.now() - startTime;
-        if (testRes.ok) {
-          return res.json({ success: true, latencyMs, message: `Connected (Local Ollama :11434 Online — ${latencyMs}ms)` });
-        }
-      } catch {
-        clearTimeout(timeoutId);
-      }
-      return res.json({ success: false, latencyMs: 0, message: 'Local Ollama is not running on :11434' });
-    }
-
-    if (providerId === 'fal') {
-      const key = process.env.FAL_KEY;
-      if (!key) {
-        return res.json({ success: false, latencyMs: 0, message: 'FAL_KEY is not configured in .env' });
-      }
-      return res.json({ success: true, latencyMs: 45, message: 'FAL_KEY is configured for Flux Visual Cloud' });
-    }
-
-    res.json({ success: false, latencyMs: 0, message: 'Unknown provider ID' });
-  } catch (error: any) {
-    const latencyMs = Date.now() - startTime;
-    res.json({ success: false, latencyMs, message: error.message || 'Connection timeout / unreachable' });
-  }
-});
-
 // 3. Consistent Website Lookbook Batch Generator (4-Anchor Reference Memory & Local Workspace Folder Storage)
 app.post('/api/generate-lookbook-batch', async (req, res) => {
   try {
@@ -1142,51 +816,71 @@ app.delete('/api/facts/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// Direct Executive Chat with Friendly & Warm Persona + Embedded Personnel Coaching
+// Direct Executive Chat using Letta Server
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
 
-    const allFactsSummary = employeesData.map(e => {
-      const fList = factsData.filter(f => f.employeeId === e.id).map(f => f.factText).join('; ');
-      const coach = e.coachingAdvisor ? `[Coaching: Motivation=${e.coachingAdvisor.motivationKey}, Growth=${e.coachingAdvisor.growthTarget}]` : '';
-      return `${e.name} (${e.role}): ${fList || 'No updates'} ${coach}`;
-    }).join('\n');
+    // We expect the frontend to optionally pass agent_id or we use a default
+    const agentId = process.env.LETTA_AGENT_ID;
+    const lettaServerUrl = process.env.LETTA_SERVER_URL || 'http://localhost:8283/v1';
 
-    const promptWithContext = `[STAFF & COACHING ADVISOR KNOWLEDGE BASE]:
-${allFactsSummary}
-
-[SHOWROOM FINANCIAL CONTEXT]:
-${latestBusinessAnalysis}
-
-[MESSAGE FROM CEO NIMA CHANGIZI]:
-${message}`;
-
-    const aiResult = await callAIMultiProvider({
-      prompt: promptWithContext,
-      systemInstruction: BRAND_SYSTEM_PROMPT,
-      temperature: 0.35,
-      maxTokens: 1000
-    });
-
-    if (aiResult && aiResult.text) {
+    if (!agentId) {
       return res.json({
-        reply: aiResult.text,
-        source: `سارا (${aiResult.provider})`
+        reply: 'سلام نیما جان! برای اتصال به من لطفا LETTA_AGENT_ID را در فایل .env تنظیم کنید.',
+        source: 'مارا (System)'
       });
     }
 
-    const fallbackReply = `سلام نیما جان! روزت بخیر. من سارا هستم و در خدمت شما برای تحلیل داده‌های شو‌روم مارکووا قرار دارم. ساختار مالی ۳۸.۱۲ میلیارد تومانی و آخرین گزارش‌های سعید، مایکل، مصطفی و اسدی کاملاً آماده بررسی و راهبردسازی هستند.`;
-    res.json({
-      reply: fallbackReply,
-      source: 'سارا (مشاور هوشمند مارکووا)'
+    // Send message to Letta agent
+    const response = await fetch(`${lettaServerUrl}/agents/${agentId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: 'user',
+            content: message
+          }
+        ]
+      })
     });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Letta API error:', response.status, errText);
+      throw new Error(`Letta server responded with ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Parse Letta response to find the assistant's message
+    // Letta returns an array of messages
+    let replyText = '';
+    if (data && data.messages && Array.isArray(data.messages)) {
+      const assistantMessages = data.messages.filter((m: any) => m.message_type === 'assistant_message');
+      if (assistantMessages.length > 0) {
+        replyText = assistantMessages[assistantMessages.length - 1].message;
+      }
+    }
+
+    if (!replyText) {
+      replyText = 'مارا در حال پردازش اطلاعات است، اما پاسخی متنی دریافت نشد.';
+    }
+
+    return res.json({
+      reply: replyText,
+      source: 'مارا (Letta Agent)'
+    });
+
   } catch (error: any) {
     console.error('Chat error:', error);
     res.status(500).json({
-      error: error.message || 'Internal AI router error',
-      reply: `سلام نیما جان، پاسخ از حافظه داخلی سارا آماده شد. تمام داده‌های شو‌روم مارکووا با امنیت کامل در دسترس شما هستند.`,
-      source: 'سارا (مشاور هوشمند مارکووا)'
+      error: error.message || 'Internal Letta router error',
+      reply: 'سلام نیما جان، ارتباط من با سرور مرکزی قطع شده است. لطفا وضعیت سرور Letta را بررسی کنید.',
+      source: 'مارا (Offline)'
     });
   }
 });

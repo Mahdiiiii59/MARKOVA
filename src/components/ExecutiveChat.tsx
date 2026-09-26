@@ -92,7 +92,7 @@ export const ExecutiveChat: React.FC<ExecutiveChatProps> = ({
               </h2>
             </div>
             <p className="text-[11px] text-stone-400">
-              سارا (مشاور هوشمند مارکووا) آنلاین است.
+              مارا (مشاور هوشمند مارکووا) آنلاین است.
             </p>
           </div>
         </div>
@@ -188,7 +188,7 @@ export const ExecutiveChat: React.FC<ExecutiveChatProps> = ({
         {isLoading && (
           <div className="flex items-center gap-2 text-xs text-stone-400 py-2 px-2" dir="auto">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-            <span>سارا در حال تحلیل و پردازش پاسخ...</span>
+            <span>مارا در حال تحلیل و پردازش پاسخ...</span>
           </div>
         )}
 
@@ -201,7 +201,7 @@ export const ExecutiveChat: React.FC<ExecutiveChatProps> = ({
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="پیام خود را برای سارا بنویسید..."
+          placeholder="پیام خود را برای مارا بنویسید..."
           dir="auto"
           className="flex-1 bg-stone-900/90 border border-stone-800 rounded-xl px-4 py-3 text-sm text-stone-100 placeholder:text-stone-500 focus:outline-none focus:border-amber-500/60 transition-colors shadow-inner bilingual-content"
         />

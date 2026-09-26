@@ -172,8 +172,8 @@ export default function App() {
       const errorMsg: ChatMessage = {
         id: String(Date.now() + 1),
         role: 'assistant',
-        content: `سلام نیما جان، پاسخ از حافظه امن سارا دریافت شد. من همیشه در کنارتان برای تصمیم‌گیری‌های هوشمند شو‌روم مارکووا آماده‌ام.`,
-        source: 'سارا (مشاور هوشمند مارکووا)',
+        content: `سلام نیما جان، پاسخ از حافظه امن مارا دریافت شد. من همیشه در کنارتان برای تصمیم‌گیری‌های هوشمند شو‌روم مارکووا آماده‌ام.`,
+        source: 'مارا (مشاور هوشمند مارکووا)',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setSessions(prevSessions =>
@@ -197,15 +197,15 @@ export default function App() {
     const newSessionId = `session-${Date.now()}`;
     const newSession: ChatSession = {
       id: newSessionId,
-      title: 'گفتگوی جدید با سارا',
-      titleFa: 'گفتگوی جدید با سارا',
+      title: 'گفتگوی جدید با مارا',
+      titleFa: 'گفتگوی جدید با مارا',
       createdAt: 'اکنون',
       messages: [
         {
           id: String(Date.now()),
           role: 'assistant',
           content: 'سلام نیما جان! در خدمتتون هستم. موضوع گفتگوی جدید رو بفرمایید تا با هم پیش ببریم.',
-          source: 'سارا (مشاور هوشمند مارکووا)',
+          source: 'مارا (مشاور هوشمند مارکووا)',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]
