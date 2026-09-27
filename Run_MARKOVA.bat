@@ -21,8 +21,8 @@ echo [*] Checking Node.js environment...
 where node >nul 2>nul
 if %errorlevel% neq 0 (
     color 0C
-    echo [ERROR] Node.js is NOT installed on this computer or not in PATH.
-    echo To run MARKOVA AI, please install Node.js Version 18 or 20 LTS.
+    echo [ERROR] Node.js is NOT installed on this computer or not in PATH!
+    echo To run MARKOVA AI, please install Node.js ^(Version 18 or 20 LTS^):
     echo Download from: https://nodejs.org/
     pause
     goto :eof
@@ -51,9 +51,9 @@ if not exist ".env" (
 if not exist "node_modules" (
     echo.
     echo [*] Required packages not found. Installing dependencies via npm...
-    echo [*] Please wait a moment, this only happens on the first run...
-    call npm install
-    if %errorlevel% neq 0 (
+    echo [*] Please wait a moment ^(this only happens on the first run^)...
+    cmd /c "npm install"
+    if errorlevel 1 (
         color 0C
         echo [ERROR] npm install encountered an error.
         pause
@@ -62,14 +62,15 @@ if not exist "node_modules" (
     echo [i] Packages successfully installed.
 )
 
-:: 5. Launch Letta Server in Background
-where letta >nul 2>nul
-if %errorlevel% equ 0 (
-    echo [*] Starting Letta Server in background...
-    start /b letta server --listen >nul 2>nul
-) else (
-    echo [!] Note: Make sure Letta is installed, e.g., pip install letta.
-)
+:: 5. Setup and Launch Letta Agent Programmatically
+echo [*] Installing requirements for Letta agent configuration...
+python -m pip install letta letta-client python-dotenv >nul 2>nul
+
+echo [*] Starting Letta Server in background...
+start /b cmd /c "letta server --listen >nul 2>nul"
+
+echo [*] Initializing Letta Agent configuration...
+python init_letta.py
 
 :: 6. Build the Application
 echo [*] Building application...

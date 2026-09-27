@@ -20,8 +20,8 @@ echo " | |\/| | / _ \ | |_) | ' / | | \  /    / _ \ \/\/ /    | | "
 echo " | |  | |/ ___ \|  _ <| . \ |_| /  \   / ___ \    /     | | "
 echo " |_|  |_/_/   \_\_| \_\_|\_\___/_/\_\ /_/   \_\/\/     |___|"
 echo "                                                               "
-echo "          MARKOVA AI - EXECUTIVE COGNITIVE SUITE "
-echo "               Powered by NEXURA AI Lab & Nima Changizi (CEO) "
+echo "                      MARKOVA AI 
+echo "               Powered by NEXURA AI Lab
 echo " ============================================================================="
 echo -e "${NC}"
 echo ""
@@ -68,14 +68,16 @@ if [ ! -d "node_modules" ]; then
     echo -e "${GREEN}[i] Packages successfully installed!${NC}"
 fi
 
-# 5. Start Letta in the background
-if command -v letta &> /dev/null; then
-    echo -e "${YELLOW}[*] Starting Letta Server in background...${NC}"
-    letta server --listen > /dev/null 2>&1 &
-    LETTA_PID=$!
-else
-    echo -e "${RED}[!] Note: Make sure Letta is installed (pip install letta) if you need the AI chat functionality.${NC}"
-fi
+# 5. Setup and Launch Letta Agent Programmatically
+echo -e "${YELLOW}[*] Installing requirements for Letta agent configuration...${NC}"
+python3 -m pip install letta letta-client python-dotenv > /dev/null 2>&1
+
+echo -e "${YELLOW}[*] Starting Letta Server in background...${NC}"
+letta server --listen > /dev/null 2>&1 &
+LETTA_PID=$!
+
+echo -e "${YELLOW}[*] Initializing Letta Agent configuration...${NC}"
+python3 init_letta.py
 
 # 6. Build the application
 echo -e "${YELLOW}[*] Building application...${NC}"
