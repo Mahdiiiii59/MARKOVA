@@ -8,16 +8,12 @@ color 0B
 cls
 
 echo.
-echo  =============================================================================
-echo   _   _ _______  ___   _ ____      _       _    ___
-echo  ^| \ ^| ^| ____\ \/ / ^| ^| ^|  _ \    / \     / \  ^|_ _^|
-echo  ^|  \^| ^|  _^|  \  /^| ^| ^| ^| ^|_) ^|  / _ \   / _ \  ^| ^|
-echo  ^| ^|\  ^| ^|___ /  \^| ^|_^| ^|  _ ^<  / ___ \ / ___ \ ^| ^|
-echo  ^|_^| \_^|_____/_/\_\___/^|_^| \_\/_/   \_/_/   \_^|___^|
+echo =============================================================================
 echo.
 echo           MARKOVA AI - EXECUTIVE COGNITIVE SUITE
-echo                Powered by NEXURA AI Lab ^& Nima Changizi (CEO)
-echo  =============================================================================
+echo                Powered by NEXURA AI Lab and Nima Changizi
+echo.
+echo =============================================================================
 echo.
 
 :: 1. Search and verify Node.js
@@ -25,8 +21,8 @@ echo [*] Checking Node.js environment...
 where node >nul 2>nul
 if %errorlevel% neq 0 (
     color 0C
-    echo [ERROR] Node.js is NOT installed on this computer or not in PATH!
-    echo To run MARKOVA AI, please install Node.js (Version 18 or 20 LTS):
+    echo [ERROR] Node.js is NOT installed on this computer or not in PATH.
+    echo To run MARKOVA AI, please install Node.js Version 18 or 20 LTS.
     echo Download from: https://nodejs.org/
     pause
     goto :eof
@@ -34,11 +30,11 @@ if %errorlevel% neq 0 (
 
 node -v
 
-:: 2. Check Git & Auto Update
+:: 2. Check Git and Auto Update
 where git >nul 2>nul
 if %errorlevel% equ 0 (
     echo [*] Checking for updates via Git...
-    call git pull origin main >nul 2>nul || echo [i] Proceeding with current local version.
+    call git pull origin main >nul 2>nul
 ) else (
     echo [i] Git not detected in PATH, proceeding with local build.
 )
@@ -51,33 +47,33 @@ if not exist ".env" (
     )
 )
 
-:: 4. Verify & Install Node Dependencies
+:: 4. Verify and Install Node Dependencies
 if not exist "node_modules" (
     echo.
     echo [*] Required packages not found. Installing dependencies via npm...
-    echo [*] Please wait a moment (this only happens on the first run)...
-    cmd /c "npm install"
+    echo [*] Please wait a moment, this only happens on the first run...
+    call npm install
     if %errorlevel% neq 0 (
         color 0C
-        echo [ERROR] npm install encountered an error!
+        echo [ERROR] npm install encountered an error.
         pause
         goto :eof
     )
-    echo [i] Packages successfully installed!
+    echo [i] Packages successfully installed.
 )
 
-:: 5. Launch Letta Server in Background (Windows)
+:: 5. Launch Letta Server in Background
 where letta >nul 2>nul
 if %errorlevel% equ 0 (
     echo [*] Starting Letta Server in background...
-    start /b cmd /c "letta server --listen >nul 2>nul"
+    start /b letta server --listen >nul 2>nul
 ) else (
-    echo [!] Note: Make sure Letta is installed (pip install letta).
+    echo [!] Note: Make sure Letta is installed, e.g., pip install letta.
 )
 
 :: 6. Build the Application
 echo [*] Building application...
-cmd /c "npm run build"
+call npm run build
 
 :: 7. Launch Full-Stack Server
 echo.
@@ -89,10 +85,10 @@ echo ===========================================================================
 echo.
 
 :: Automatically open browser after a brief delay
-start "" cmd /c "timeout /t 3 /nobreak >nul & start http://localhost:3000"
+start http://localhost:3000
 
-:: Start the application
-cmd /c "npm start"
+:: Start the application directly using node so npm doesn't hijack the process
+node dist/server.cjs
 
 :: If we reach here, it means the server stopped
 color 0C
