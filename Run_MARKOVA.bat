@@ -26,7 +26,7 @@ where node >nul 2>nul
 if %errorlevel% neq 0 (
     color 0C
     echo [ERROR] Node.js is NOT installed on this computer or not in PATH!
-    echo To run MARKOVA AI, please install Node.js (Version 18 or 20 LTS):
+    echo To run MARKOVA AI, please install Node.js ^(Version 18 or 20 LTS^):
     echo Download from: https://nodejs.org/
     pause
     goto :eof
@@ -55,9 +55,9 @@ if not exist ".env" (
 if not exist "node_modules" (
     echo.
     echo [*] Required packages not found. Installing dependencies via npm...
-    echo [*] Please wait a moment (this only happens on the first run)...
+    echo [*] Please wait a moment ^(this only happens on the first run^)...
     cmd /c "npm install"
-    if %errorlevel% neq 0 (
+    if errorlevel 1 (
         color 0C
         echo [ERROR] npm install encountered an error!
         pause
