@@ -45,7 +45,7 @@ export const SystemHub: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'routing' | 'apis' | 'telemetry' | 'future_guide' | 'scripts'>('routing');
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [selectedEndpoint, setSelectedEndpoint] = useState<number>(0);
-  const [selectedScriptFile, setSelectedScriptFile] = useState<string>('app.py');
+  const [selectedScriptFile, setSelectedScriptFile] = useState<string>('server.ts');
 
   // Reserved Routing State
   const [routingConfig, setRoutingConfig] = useState<ReservedEngineRouting>({
@@ -489,9 +489,9 @@ export const SystemHub: React.FC = () => {
   ];
 
   const filesContent: Record<string, { label: string; path: string; desc: string; code: string }> = {
-    'app.py': {
-      label: 'app.py',
-      path: '/app.py',
+    'server.ts': {
+      label: 'server.ts',
+      path: '/server.ts',
       desc: 'Streamlit entry point: Clean Executive chat directly conversing with CEO Nima Changizi.',
       code: `import streamlit as st
 import config
@@ -1477,7 +1477,7 @@ ACTIVE_ENGINE = os.getenv("ACTIVE_ENGINE", "ollama").lower() # "mlx" or "ollama"
       )}
 
       {/* =========================================================================
-          SUB-TAB 4: OFFLINE PYTHON SCRIPTS & LAUNCHERS
+          SUB-TAB 4: DEPLOYMENT SCRIPTS
       ========================================================================= */}
       {activeSubTab === 'scripts' && (
         <div className="space-y-6">
@@ -1487,14 +1487,14 @@ ACTIVE_ENGINE = os.getenv("ACTIVE_ENGINE", "ollama").lower() # "mlx" or "ollama"
             <div className="bg-stone-900/60 border border-stone-800/80 rounded-2xl p-4 space-y-2">
               <div className="flex items-center gap-2 text-stone-100 font-bold text-xs">
                 <Monitor className="w-4 h-4 text-amber-500" />
-                <span>Windows 1-Click Launcher (`Run_MARKOVA.bat`)</span>
+                <span>Windows NPM Start Launcher (`run.bat`)</span>
               </div>
               <p className="text-xs text-stone-400">
                 Displays the NEXURA AI Lab banner, verifies Node.js & dependencies, and boots the full-stack React 19 + Express engine at <code className="text-amber-400">http://localhost:3000</code>.
               </p>
               <div className="bg-stone-950 border border-stone-800 rounded-xl p-3 font-mono text-xs text-stone-300 space-y-1">
                 <div className="text-stone-500">:: 1. Launch in Windows Command Prompt</div>
-                <div>Run_MARKOVA.bat</div>
+                <div>run.bat</div>
                 <div className="text-stone-500">:: Or launch with npm</div>
                 <div>npm run dev</div>
               </div>
@@ -1504,15 +1504,15 @@ ACTIVE_ENGINE = os.getenv("ACTIVE_ENGINE", "ollama").lower() # "mlx" or "ollama"
             <div className="bg-stone-900/60 border border-stone-800/80 rounded-2xl p-4 space-y-2">
               <div className="flex items-center gap-2 text-stone-100 font-bold text-xs">
                 <Apple className="w-4 h-4 text-amber-500" />
-                <span>macOS / Linux Launcher (`Run_MARKOVA.command`)</span>
+                <span>macOS / Linux Launcher (`run.command`)</span>
               </div>
               <p className="text-xs text-stone-400">
                 Executes the full-stack suite with NEXURA ASCII art and auto-opens <code className="text-amber-400">http://localhost:3000</code> in your browser.
               </p>
               <div className="bg-stone-950 border border-stone-800 rounded-xl p-3 font-mono text-xs text-stone-300 space-y-1">
                 <div className="text-stone-500"># 1. Run in Terminal</div>
-                <div>chmod +x Run_MARKOVA.command</div>
-                <div>./Run_MARKOVA.command</div>
+                <div>chmod +x run.command</div>
+                <div>./run.command</div>
               </div>
             </div>
           </div>
