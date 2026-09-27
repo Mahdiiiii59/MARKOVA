@@ -66,14 +66,15 @@ if not exist "node_modules" (
     echo [i] Packages successfully installed!
 )
 
-:: 5. Launch Letta Server in Background (Windows)
-where letta >nul 2>nul
-if %errorlevel% equ 0 (
-    echo [*] Starting Letta Server in background...
-    start /b cmd /c "letta server --listen >nul 2>nul"
-) else (
-    echo [!] Note: Make sure Letta is installed (pip install letta).
-)
+:: 5. Setup and Launch Letta Agent Programmatically
+echo [*] Installing requirements for Letta agent configuration...
+python -m pip install letta letta-client python-dotenv >nul 2>nul
+
+echo [*] Starting Letta Server in background...
+start /b cmd /c "letta server --listen >nul 2>nul"
+
+echo [*] Initializing Letta Agent configuration...
+python init_letta.py
 
 :: 6. Build the Application
 echo [*] Building application...
