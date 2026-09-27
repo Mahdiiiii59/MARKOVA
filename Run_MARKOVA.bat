@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+cd /d "%~dp0"
 title MARKOVA AI - Letta Executive Launcher
 color 0B
 cls
@@ -82,7 +83,7 @@ if not exist "node_modules\tsx" (
     echo.
     echo [*] Required packages not found. Installing dependencies via npm...
     echo [*] Please wait a moment (this only happens on the first run)...
-    call npm install
+    call npm install || cmd /c npm install
     if %errorlevel% neq 0 (
         color 0C
         echo.
@@ -108,7 +109,7 @@ if %errorlevel% equ 0 (
 
 :: 6. Build the Application
 echo [*] Building application...
-call npm run build
+call npm run build || cmd /c npm run build
 
 :: 7. Launch Full-Stack Server
 echo.
@@ -123,7 +124,7 @@ echo.
 start "" cmd /c "timeout /t 3 /nobreak >nul & start http://localhost:3000"
 
 :: Start the application
-call npm start
+call npm start || cmd /c npm start
 
 if %errorlevel% neq 0 (
     color 0C
