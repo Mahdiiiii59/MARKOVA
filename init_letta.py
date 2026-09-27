@@ -54,7 +54,7 @@ def wait_for_server(url, timeout=30):
 
 def setup_agent():
     # Wait for server to come online
-    if not wait_for_server(LETTA_SERVER_URL, timeout=5):
+    if not wait_for_server(LETTA_SERVER_URL, timeout=30):
         print(f"[!] Letta server did not become ready within the timeout. Please check if it's running.")
         sys.exit(1)
 
