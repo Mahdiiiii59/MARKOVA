@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { ExecutiveChat } from './components/ExecutiveChat';
-import { VisualStudio } from './components/VisualStudio';
 import { PersonnelIntelligence } from './components/PersonnelIntelligence';
 import { DocumentIntelligence } from './components/DocumentIntelligence';
 import { SystemHub } from './components/SystemHub';
@@ -12,10 +11,9 @@ import { Employee, ChatMessage, ChatSession, DocumentRecord, FashionStyle, LogoS
 const initialChatSessions: ChatSession[] = [];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'studio' | 'employees' | 'documents' | 'system'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'employees' | 'documents' | 'system'>('chat');
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
-  const [styles, setStyles] = useState<FashionStyle[]>([]);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
 
@@ -76,10 +74,9 @@ export default function App() {
   // Fetch initial backend data
   const fetchData = async () => {
     try {
-      const [empRes, docRes, styleRes, logoRes] = await Promise.all([
+      const [empRes, docRes, logoRes] = await Promise.all([
         fetch('/api/employees'),
         fetch('/api/documents'),
-        fetch('/api/styles'),
         fetch('/api/logo-settings')
       ]);
 
@@ -90,10 +87,6 @@ export default function App() {
       if (docRes.ok) {
         const docs = await docRes.json();
         setDocuments(docs);
-      }
-      if (styleRes.ok) {
-        const stls = await styleRes.json();
-        setStyles(stls);
       }
       if (logoRes.ok) {
         const lSettings = await logoRes.json();
@@ -241,34 +234,6 @@ export default function App() {
     setSessions(prev =>
       prev.map(sess => (sess.id === activeSessionId ? { ...sess, messages: [] } : sess))
     );
-  };
-
-  // Add Style
-  const handleAddStyle = async (newStyle: Omit<FashionStyle, 'id' | 'createdAt'>) => {
-    try {
-      const res = await fetch('/api/styles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newStyle)
-      });
-      if (res.ok) {
-        await fetchData();
-      }
-    } catch (err) {
-      console.error('Error adding style:', err);
-    }
-  };
-
-  // Delete Style
-  const handleDeleteStyle = async (styleId: string) => {
-    try {
-      const res = await fetch(`/api/styles/${styleId}`, { method: 'DELETE' });
-      if (res.ok) {
-        await fetchData();
-      }
-    } catch (err) {
-      console.error('Error deleting style:', err);
-    }
   };
 
   // Add Fact to Staff Memory
@@ -419,14 +384,6 @@ export default function App() {
             onSendMessage={handleSendMessage}
             onClearCurrentChat={handleClearCurrentChat}
             isLoading={isLoadingChat}
-          />
-        )}
-
-        {activeTab === 'studio' && (
-          <VisualStudio
-            styles={styles}
-            onAddStyle={handleAddStyle}
-            onDeleteStyle={handleDeleteStyle}
           />
         )}
 

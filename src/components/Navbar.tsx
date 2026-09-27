@@ -3,8 +3,8 @@ import { MessageSquare, Camera, Users, FileSpreadsheet, Terminal, Sliders } from
 import { MarkovaBrandBadge } from './MarkovaLogo';
 
 interface NavbarProps {
-  activeTab: 'chat' | 'studio' | 'employees' | 'documents' | 'system';
-  setActiveTab: (tab: 'chat' | 'studio' | 'employees' | 'documents' | 'system') => void;
+  activeTab: 'chat' | 'employees' | 'documents' | 'system';
+  setActiveTab: (tab: 'chat' | 'employees' | 'documents' | 'system') => void;
   customLogoUrl: string | null;
   onOpenLogoSettings: () => void;
 }
@@ -37,17 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span>Chat</span>
         </button>
 
-        <button
-          onClick={() => setActiveTab('studio')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'studio'
-              ? 'bg-stone-100 text-stone-950 font-bold shadow-sm'
-              : 'text-stone-400 hover:text-stone-200'
-          }`}
-        >
-          <Camera className="w-3.5 h-3.5 text-amber-500" />
-          <span>Visual Studio</span>
-        </button>
+
 
         <button
           onClick={() => setActiveTab('employees')}
