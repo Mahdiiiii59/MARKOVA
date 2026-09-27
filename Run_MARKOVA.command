@@ -69,10 +69,24 @@ fi
 
 # 5. Setup and Launch Letta Agent Programmatically
 echo -e "${YELLOW}[*] Installing requirements for Letta agent configuration...${NC}"
-python3 -m pip install letta letta-client python-dotenv > /dev/null 2>&1
+python3 -m pip install letta letta-client python-dotenv requests
+
+# Load .env into the shell session so letta server inherits the variables
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Set Letta's OpenAI override variables to point to your GapGPT proxy
+if [ ! -z "$GAPGPT_BASE_URL" ]; then
+    export OPENAI_API_BASE="$GAPGPT_BASE_URL"
+    export OPENAI_BASE_URL="$GAPGPT_BASE_URL"
+fi
+if [ ! -z "$GAPGPT_API_KEY" ]; then
+    export OPENAI_API_KEY="$GAPGPT_API_KEY"
+fi
 
 echo -e "${YELLOW}[*] Starting Letta Server in background...${NC}"
-letta server --listen > /dev/null 2>&1 &
+letta server --listen &
 LETTA_PID=$!
 
 echo -e "${YELLOW}[*] Initializing Letta Agent configuration...${NC}"

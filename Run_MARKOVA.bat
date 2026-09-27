@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 :: MARKOVA AI - Letta Executive Launcher
 :: Added global error handling and robust pausing
 
@@ -68,10 +69,26 @@ if not exist "node_modules" (
 
 :: 5. Setup and Launch Letta Agent Programmatically
 echo [*] Installing requirements for Letta agent configuration...
-python -m pip install letta letta-client python-dotenv >nul 2>nul
+python -m pip install letta letta-client python-dotenv requests
+
+:: Load .env into the batch session so letta server inherits the variables
+if exist .env (
+    for /f "usebackq tokens=1* delims==" %%a in (".env") do (
+        set "%%a=%%b"
+    )
+)
+
+:: Set Letta's OpenAI override variables to point to your GapGPT proxy
+if defined GAPGPT_BASE_URL (
+    set "OPENAI_API_BASE=%GAPGPT_BASE_URL%"
+    set "OPENAI_BASE_URL=%GAPGPT_BASE_URL%"
+)
+if defined GAPGPT_API_KEY (
+    set "OPENAI_API_KEY=%GAPGPT_API_KEY%"
+)
 
 echo [*] Starting Letta Server in background...
-start /b cmd /c "letta server --listen >nul 2>nul"
+start /b cmd /c "letta server --listen"
 
 echo [*] Initializing Letta Agent configuration...
 python init_letta.py
