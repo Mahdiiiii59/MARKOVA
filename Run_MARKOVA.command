@@ -20,8 +20,8 @@ echo " | |\/| | / _ \ | |_) | ' / | | \  /    / _ \ \/\/ /    | | "
 echo " | |  | |/ ___ \|  _ <| . \ |_| /  \   / ___ \    /     | | "
 echo " |_|  |_/_/   \_\_| \_\_|\_\___/_/\_\ /_/   \_\/\/     |___|"
 echo "                                                               "
-echo "          MARKOVA AI - EXECUTIVE COGNITIVE SUITE "
-echo "               Powered by NEXURA AI Lab & Nima Changizi (CEO) "
+echo "                      MARKOVA AI 
+echo "               Powered by NEXURA AI Lab
 echo " ============================================================================="
 echo -e "${NC}"
 echo ""
