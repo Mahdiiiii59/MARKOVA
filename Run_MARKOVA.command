@@ -33,7 +33,8 @@ if ! command -v node &> /dev/null; then
     echo -e "${RED}[ERROR] Node.js is NOT installed!${NC}"
     echo -e "Please install Node.js (Version 18 or 20 LTS) from https://nodejs.org/"
     echo -e "${RED}=============================================================================${NC}"
-    kill -INT $$
+    read -p "Press Enter to exit..."
+    exit 1
 fi
 node_version=$(node -v)
 echo -e "${GREEN}[i] Detected Node.js version: ${node_version}${NC}"
@@ -41,8 +42,7 @@ echo -e "${GREEN}[i] Detected Node.js version: ${node_version}${NC}"
 # 2. Git Check & Auto-pull
 if command -v git &> /dev/null; then
     echo -e "${YELLOW}[*] Checking for updates via Git...${NC}"
-    # Suppressing prompts for automated scripts
-    GIT_TERMINAL_PROMPT=0 git pull origin main > /dev/null 2>&1 || GIT_TERMINAL_PROMPT=0 git pull > /dev/null 2>&1 || echo -e "${CYAN}[i] Proceeding with current local version.${NC}"
+    GIT_TERMINAL_PROMPT=0 git pull origin main > /dev/null 2>&1 || echo -e "${CYAN}[i] Proceeding with current local version.${NC}"
 else
     echo -e "${CYAN}[i] Git not found, skipping update check.${NC}"
 fi
@@ -56,13 +56,14 @@ if [ ! -f .env ]; then
 fi
 
 # 4. Install Node dependencies
-if [ ! -d "node_modules" ] || [ ! -d "node_modules/tsx" ]; then
+if [ ! -d "node_modules" ]; then
     echo -e "\n${YELLOW}[*] Required packages not found. Installing dependencies via npm...${NC}"
     echo -e "${CYAN}[*] Please wait a moment...${NC}"
     npm install
     if [ $? -ne 0 ]; then
         echo -e "\n${RED}[ERROR] npm install encountered an error!${NC}"
-        kill -INT $$
+        read -p "Press Enter to exit..."
+        exit 1
     fi
     echo -e "${GREEN}[i] Packages successfully installed!${NC}"
 fi
@@ -81,6 +82,11 @@ python3 init_letta.py
 # 6. Build the application
 echo -e "${YELLOW}[*] Building application...${NC}"
 npm run build
+if [ $? -ne 0 ]; then
+    echo -e "\n${RED}[ERROR] npm run build encountered an error!${NC}"
+    read -p "Press Enter to exit..."
+    exit 1
+fi
 
 # 7. Start the UI Server
 echo -e "\n${CYAN}=============================================================================${NC}"
@@ -98,11 +104,12 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     fi
 fi
 
-# DO NOT RUN THE ACTUAL SERVER IN THIS SCRIPT CREATION SESSION SO IT DOESNT BLOCK
-# WE WILL USE npm start INSTEAD OF npm start SO IT DOESNT TRIGGER THE CHECKER
 npm start
 
 # Cleanup background process
 if [ ! -z "$LETTA_PID" ]; then
     kill $LETTA_PID 2>/dev/null || true
 fi
+
+echo -e "\n${RED}[!] Server stopped.${NC}"
+read -p "Press Enter to exit..."
